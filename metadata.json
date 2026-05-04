@@ -1,0 +1,12 @@
+{
+  "name": "Radio Corrientes Viva",
+  "description": "Aplicación oficial de Radio Corrientes Viva con streaming en vivo, visualizador de audio y chat interactivo.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "Audio Streaming",
+    "AI Artist Info",
+    "Real-time Visualization"
+  ]
+}

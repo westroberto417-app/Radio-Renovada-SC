@@ -1,0 +1,21 @@
+{
+  "name": "Radio Corrientes Viva",
+  "short_name": "Corrientes Viva",
+  "description": "Radio en vivo desde Corrientes, Argentina",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0b1e",
+  "theme_color": "#ff007f",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
