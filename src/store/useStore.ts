@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 
-export type Tab = 'inicio' | 'chat' | 'pedir' | 'noticias' | 'mas' | 'admin';
+export type Tab = 'inicio' | 'chat' | 'pedir' | 'noticias' | 'mas' | 'admin' | 'sumate' | 'aplicacion' | 'reflexion';
 
 interface AppState {
   activeTab: Tab;
   isPlaying: boolean;
   volume: number;
   isMuted: boolean;
+  isDucked: boolean;
   currentTrack: {
     title: string;
     artist: string;
@@ -16,6 +17,7 @@ interface AppState {
   setIsPlaying: (playing: boolean) => void;
   setVolume: (volume: number) => void;
   setIsMuted: (muted: boolean) => void;
+  setIsDucked: (ducked: boolean) => void;
   setTrack: (track: { title: string; artist: string; albumArt?: string }) => void;
 }
 
@@ -24,6 +26,7 @@ export const useStore = create<AppState>((set) => ({
   isPlaying: false,
   volume: 0.8,
   isMuted: false,
+  isDucked: false,
   currentTrack: {
     title: 'Radio Corrientes Viva',
     artist: 'En Vivo',
@@ -32,5 +35,6 @@ export const useStore = create<AppState>((set) => ({
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setVolume: (volume) => set({ volume }),
   setIsMuted: (muted) => set({ isMuted: muted }),
+  setIsDucked: (ducked) => set({ isDucked: ducked }),
   setTrack: (track) => set({ currentTrack: track }),
 }));

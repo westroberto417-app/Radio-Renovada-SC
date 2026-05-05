@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 
 export const PersistentPlayer = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { isPlaying, volume, isMuted, setIsPlaying, setTrack } = useStore();
+  const { isPlaying, volume, isMuted, isDucked, setIsPlaying, setTrack, currentTrack } = useStore();
   const STREAM_URL = '/api/stream';
 
   // Polling de metadatos
@@ -13,8 +13,12 @@ export const PersistentPlayer = () => {
     const fetchMetadata = async () => {
       try {
         const response = await fetch('/api/metadata');
+        if (!response.ok) {
+          // Si no es un OK, no intentamos parsear JSON para evitar el error "Rate exceeded"
+          return;
+        }
         const data = await response.json();
-        if (data.title && data.artist) {
+        if (data && data.title && data.artist) {
           setTrack({
             title: data.title,
             artist: data.artist,
@@ -22,7 +26,10 @@ export const PersistentPlayer = () => {
           });
         }
       } catch (err) {
-        console.error("Error fetching metadata:", err);
+        // Solo logueamos errores reales de red o parseo, no los 429 ya filtrados
+        if (!(err instanceof Error && err.message.includes('Unexpected token'))) {
+          console.error("Error fetching metadata:", err);
+        }
       }
     };
 
@@ -36,11 +43,26 @@ export const PersistentPlayer = () => {
     };
   }, [isPlaying, setTrack]);
 
+  // Update Media Session API dynamically
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title || 'Radio Corrientes Viva',
+        artist: currentTrack.artist || 'En Vivo',
+        album: 'Radio Corrientes Viva',
+        artwork: [
+          { src: currentTrack.albumArt || 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=512&h=512&fit=crop', sizes: '512x512', type: 'image/jpeg' } // Using a generic radio/music Unsplash image as fallback if logo.png doesn't exist, though we can stick to what was there '/logo.png'
+        ]
+      });
+    }
+  }, [currentTrack]);
+
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+      const finalVolume = isMuted ? 0 : (isDucked ? volume * 0.15 : volume);
+      audioRef.current.volume = finalVolume;
     }
-  }, [volume, isMuted]);
+  }, [volume, isMuted, isDucked]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -52,15 +74,6 @@ export const PersistentPlayer = () => {
 
         // Media Session API for background/system controls
         if ('mediaSession' in navigator) {
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: 'Radio Corrientes Viva',
-            artist: 'En Vivo',
-            album: 'Corrientes, Argentina',
-            artwork: [
-              { src: '/logo.png', sizes: '512x512', type: 'image/png' }
-            ]
-          });
-
           navigator.mediaSession.setActionHandler('play', () => {
             audioRef.current?.play();
             setIsPlaying(true);

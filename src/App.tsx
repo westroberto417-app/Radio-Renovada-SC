@@ -8,6 +8,10 @@ import { Chat } from './components/Chat';
 import { PedirTema } from './components/PedirTema';
 import { Noticias } from './components/Noticias';
 import { Mas } from './components/Mas';
+import { AdminPanel } from './components/AdminPanel';
+import { Sumate } from './components/Sumate';
+import { Reflexion } from './components/Reflexion';
+import Aplicacion from './components/Aplicacion';
 import { motion, AnimatePresence } from 'motion/react';
 
 const App = () => {
@@ -20,6 +24,10 @@ const App = () => {
       case 'pedir': return <PedirTema />;
       case 'noticias': return <Noticias />;
       case 'mas': return <Mas />;
+      case 'admin': return <AdminPanel />;
+      case 'sumate': return <Sumate />;
+      case 'aplicacion': return <Aplicacion />;
+      case 'reflexion': return <Reflexion />;
       default: return <Inicio />;
     }
   };
@@ -43,7 +51,7 @@ const App = () => {
       <PersistentPlayer />
       <TopBar />
       
-      <main className="relative z-10">
+      <main className="relative z-10 pb-28">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -55,6 +63,13 @@ const App = () => {
             {renderContent()}
           </motion.div>
         </AnimatePresence>
+        
+        {/* Global Footer Text */}
+        <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none opacity-50">
+          <p className="text-[7px] text-white/30 uppercase tracking-widest font-black">
+            App creada por West y Google AI Studio
+          </p>
+        </div>
       </main>
 
       <BottomNav />

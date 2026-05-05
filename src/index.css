@@ -10,6 +10,11 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
   body {
     @apply bg-[#0b0c10] text-white antialiased overflow-x-hidden font-sans select-none;
   }
@@ -44,6 +49,17 @@
   
   input:focus, textarea:focus {
     @apply outline-none ring-0;
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .animate-marquee {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 30s linear infinite;
   }
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, MessageSquare, Music, Newspaper, MoreHorizontal, User } from 'lucide-react';
+import { Home, MessageSquare, Music, Newspaper, MoreHorizontal, User, Megaphone } from 'lucide-react';
 import { useStore, Tab } from '../store/useStore';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -9,6 +9,7 @@ const tabs = [
   { id: 'chat', label: 'Chat', icon: MessageSquare },
   { id: 'pedir', label: 'Pedir Tema', icon: Music },
   { id: 'noticias', label: 'Noticias', icon: Newspaper },
+  { id: 'aplicacion', label: 'Publicidad', icon: Megaphone },
   { id: 'mas', label: 'Más', icon: MoreHorizontal },
 ];
 

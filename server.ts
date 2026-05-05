@@ -22,15 +22,35 @@ async function startServer() {
     res.sendFile(path.join(process.cwd(), "public", "manifest.json"));
   });
 
+  // Cache para metadatos
+  let cache: { data: any; timestamp: number } | null = null;
+  const CACHE_TTL = 15000; // 15 segundos
+
   app.get("/api/metadata", async (req, res) => {
     try {
+      // Retornar cache si es reciente
+      if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
+        return res.json(cache.data);
+      }
+
       const STREAM_ID = 'radiocorrientesviva';
       const response = await fetch(`https://streaming.rf.com.ar/status-json.xsl`, {
         headers: { 'Accept': 'application/json' },
         timeout: 5000
       });
       
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 403) {
+          const fallback = { artist: 'Radio Corrientes Viva', title: 'Transmitiendo en Vivo', albumArt: null };
+          cache = { data: fallback, timestamp: Date.now() };
+          return res.json(fallback);
+        }
+        const text = await response.text();
+        if (text.includes("Rate exceeded")) {
+          throw new Error("RATE_LIMIT");
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
@@ -53,23 +73,32 @@ async function startServer() {
         const artistClean = titleParts[0]?.trim() || 'Radio Corrientes Viva';
         const titleClean = titleParts[1]?.trim() || 'En Vivo';
         
-        // We'll let the frontend decide the albumArt or show the Logo.
         let albumArt = null;
         if (artistClean && artistClean.toLowerCase() !== 'radio corrientes viva' && artistClean.toLowerCase() !== 'stream') {
            albumArt = `https://images.unsplash.com/photo-1514525253361-bee8718a74a2?auto=format&fit=crop&q=80&w=800&sig=${encodeURIComponent(artistClean)}`;
         }
 
-        res.json({
+        const result = {
           artist: artistClean,
           title: titleClean,
           albumArt,
           now_playing: source.title
-        });
+        };
+
+        // Guardar en cache
+        cache = { data: result, timestamp: Date.now() };
+        res.json(result);
       } else {
-        res.json({ artist: 'Radio Corrientes Viva', title: 'En Vivo', albumArt: null });
+        const fallback = { artist: 'Radio Corrientes Viva', title: 'En Vivo', albumArt: null };
+        cache = { data: fallback, timestamp: Date.now() };
+        res.json(fallback);
       }
-    } catch (error) {
-      // Fallback silencioso para no llenar logs si el servidor falla
+    } catch (error: any) {
+      console.error("Metadata fetch error:", error.message);
+      // Fallback silencioso
+      if (cache) {
+        return res.json(cache.data);
+      }
       res.json({ artist: 'Radio Corrientes Viva', title: 'Escuchando en Vivo', albumArt: null });
     }
   });

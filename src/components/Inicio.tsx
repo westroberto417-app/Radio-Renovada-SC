@@ -3,7 +3,7 @@ import { Play, Pause, Volume2, VolumeX, Info, X, Sparkles, Moon, Share2 } from '
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../store/useStore';
 import { Visualizer } from './Visualizer';
-import { getArtistInfo } from '../services/geminiService';
+import { getArtistInfo, getMarqueeText } from '../services/geminiService';
 import { cn } from '../lib/utils';
 
 const RadioLogo = ({ isPlaying }: { isPlaying: boolean }) => {
@@ -56,6 +56,17 @@ export const Inicio = () => {
   const [showTimerMenu, setShowTimerMenu] = useState(false);
   const [sleepTimer, setSleepTimer] = useState<number | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [marqueeText, setMarqueeText] = useState("Escuchando Radio Corrientes Viva...");
+
+  useEffect(() => {
+    const fetchMarquee = async () => {
+      const text = await getMarqueeText();
+      setMarqueeText(text);
+    };
+    fetchMarquee();
+    const interval = setInterval(fetchMarquee, 3 * 60 * 1000); // refresh every 3 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (sleepTimer) {
@@ -342,7 +353,7 @@ export const Inicio = () => {
         </AnimatePresence>
 
         {/* Volume & Details Bar */}
-        <div className="w-full flex items-center gap-4 px-2">
+        <div className="w-full flex items-center gap-4 px-2 mb-6">
            <button onClick={() => setIsMuted(!isMuted)} className="text-white/40">
              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
            </button>
@@ -368,6 +379,32 @@ export const Inicio = () => {
            <button onClick={fetchAiInfo} className="text-white/40">
              <Sparkles size={18} />
            </button>
+        </div>
+
+        {/* Marquee Schedule */}
+        <div className="w-full mt-4 mb-2">
+          <h3 className="text-[10px] md:text-xs uppercase tracking-widest text-white/50 font-bold mb-3 px-3 flex items-center gap-2">
+            <Sparkles size={14} className="text-white/40" />
+            Programación Sonando
+          </h3>
+          <div className="w-full overflow-hidden bg-white/5 border border-white/10 rounded-xl flex items-center h-12 relative backdrop-blur-md">
+            <div className="absolute left-2 z-10 bg-[#06070a] pl-2.5 pr-3 py-1.5 flex items-center gap-2 rounded-lg border border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff007f] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff007f]"></span>
+              </span>
+              <span className="text-[10px] uppercase font-black tracking-widest text-white/90">Al Aire</span>
+            </div>
+
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-[#0b0c10] via-[#0b0c10]/90 to-transparent z-[5]" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0b0c10] to-transparent z-[5]" />
+            
+            <div className="w-full overflow-hidden flex items-center">
+              <div className="animate-marquee whitespace-nowrap pl-28">
+                <span className="text-sm font-medium text-white/90 tracking-wide">{marqueeText}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

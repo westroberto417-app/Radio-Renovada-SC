@@ -1,6 +1,7 @@
 import React from 'react';
-import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink } from 'lucide-react';
+import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useStore } from '../store/useStore';
 
 const socialLinks = [
   { icon: Instagram, label: 'Instagram', url: '#', color: 'bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500' },
@@ -10,15 +11,76 @@ const socialLinks = [
 ];
 
 export const Mas = () => {
+  const { setActiveTab } = useStore();
+
   return (
-    <div className="min-h-screen pt-24 pb-24 px-6 bg-transparent">
+    <div className="min-h-screen pt-24 pb-32 px-6 bg-transparent">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="space-y-8"
       >
+        {/* Reflection Section */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic underline decoration-[#ff007f] decoration-4 underline-offset-8">Inspiración</h2>
+            <p className="text-sm text-white/40">Detente un momento y alimenta tu espíritu.</p>
+          </div>
+          
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveTab('reflexion')}
+            className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-8 text-left transition-all hover:border-[#00f2ff]/30 shadow-2xl"
+          >
+            <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity">
+              <Sparkles size={60} className="text-[#00f2ff]" />
+            </div>
+            
+            <div className="relative z-10 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#00f2ff]/10 border border-[#00f2ff]/20 flex items-center justify-center">
+                <Sparkles size={24} className="text-[#00f2ff]" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter">
+                  Reflexión <br />
+                  <span className="text-[#00f2ff]">Espiritual</span>
+                </h3>
+                <p className="text-xs text-white/50 font-medium">Sabiduría práctica para tu vida diaria.</p>
+              </div>
+            </div>
+          </motion.button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic underline decoration-red-500 decoration-4 underline-offset-8">Estudio</h2>
+            <p className="text-sm text-white/40">Sistemas técnicos y transmisión.</p>
+          </div>
+          
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setActiveTab('admin')}
+            className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-8 text-left transition-all hover:border-red-500/30 shadow-2xl"
+          >
+            <div className="relative z-10 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <Sparkles size={24} className="text-red-500" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter">
+                  Control <br />
+                  <span className="text-red-500">RadioBoss</span>
+                </h3>
+                <p className="text-xs text-white/50 font-medium">Panel de TTS y alertas meteorológicas.</p>
+              </div>
+            </div>
+          </motion.button>
+        </div>
+
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic">Conéctate</h2>
+          <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic underline decoration-[#00f2ff] decoration-4 underline-offset-8">Conéctate</h2>
           <p className="text-sm text-white/40">Sigue nuestras redes y participa de sorteos.</p>
         </div>
 
