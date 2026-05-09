@@ -6,11 +6,26 @@ export const PedirTema = () => {
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: '', song: '', artist: '', message: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
-    setTimeout(() => setSent(false), 5000);
-    setForm({ name: '', song: '', artist: '', message: '' });
+    try {
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      
+      if (response.ok) {
+        setSent(true);
+        setTimeout(() => setSent(false), 5000);
+        setForm({ name: '', song: '', artist: '', message: '' });
+      } else {
+        alert("Error al enviar el pedido. Intenta de nuevo.");
+      }
+    } catch (err) {
+      console.error("Error sending request:", err);
+      alert("Error de conexión. Intenta de nuevo.");
+    }
   };
 
   return (

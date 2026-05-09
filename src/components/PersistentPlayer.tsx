@@ -4,44 +4,17 @@ import { useStore } from '../store/useStore';
 export const PersistentPlayer = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { isPlaying, volume, isMuted, isDucked, setIsPlaying, setTrack, currentTrack } = useStore();
-  const STREAM_URL = '/api/stream';
+  const STREAM_URL = 'https://streaming.rf.com.ar/listen/radiocorrientesviva/radio.mp3';
 
-  // Polling de metadatos
+  // Polling de metadatos desactivado por solicitud del usuario
   useEffect(() => {
-    let interval: number;
-    
-    const fetchMetadata = async () => {
-      try {
-        const response = await fetch('/api/metadata');
-        if (!response.ok) {
-          // Si no es un OK, no intentamos parsear JSON para evitar el error "Rate exceeded"
-          return;
-        }
-        const data = await response.json();
-        if (data && data.title && data.artist) {
-          setTrack({
-            title: data.title,
-            artist: data.artist,
-            albumArt: data.albumArt
-          });
-        }
-      } catch (err) {
-        // Solo logueamos errores reales de red o parseo, no los 429 ya filtrados
-        if (!(err instanceof Error && err.message.includes('Unexpected token'))) {
-          console.error("Error fetching metadata:", err);
-        }
-      }
-    };
-
-    if (isPlaying) {
-      fetchMetadata();
-      interval = window.setInterval(fetchMetadata, 10000); // Cada 10 segundos
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isPlaying, setTrack]);
+    // Seteamos metadatos estáticos iniciales
+    setTrack({
+      title: 'Transmitiendo en Vivo',
+      artist: 'Radio Corrientes Viva',
+      albumArt: 'https://images.unsplash.com/photo-1514525253361-bee8718a74a2?auto=format&fit=crop&q=80&w=800'
+    });
+  }, [setTrack]);
 
   // Update Media Session API dynamically
   useEffect(() => {
@@ -67,6 +40,12 @@ export const PersistentPlayer = () => {
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
+        // Para radio en vivo, si no tiene src o fue removido, lo volvemos a setear con un timestamp 
+        // para asegurar que conecte a la emisión actual y no reproduzca audio bufferizado (del pasado).
+        if (!audioRef.current.src || !audioRef.current.src.includes(STREAM_URL)) {
+          audioRef.current.src = STREAM_URL + '?t=' + Date.now();
+        }
+        
         audioRef.current.play().catch((err) => {
           console.error("Playback error:", err);
           setIsPlaying(false);
@@ -75,16 +54,27 @@ export const PersistentPlayer = () => {
         // Media Session API for background/system controls
         if ('mediaSession' in navigator) {
           navigator.mediaSession.setActionHandler('play', () => {
+            if (audioRef.current && !audioRef.current.src.includes(STREAM_URL)) {
+              audioRef.current.src = STREAM_URL + '?t=' + Date.now();
+            }
             audioRef.current?.play();
             setIsPlaying(true);
           });
           navigator.mediaSession.setActionHandler('pause', () => {
             audioRef.current?.pause();
+            // Descartamos el stream para que no guarde buffer viejo
+            if (audioRef.current) {
+              audioRef.current.removeAttribute('src');
+              audioRef.current.load();
+            }
             setIsPlaying(false);
           });
         }
       } else {
         audioRef.current.pause();
+        // Cuando pausamos radio en vivo, debemos descartar el buffer para no escuchar el pasado al reanudar
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
       }
     }
   }, [isPlaying, setIsPlaying]);
@@ -106,9 +96,6 @@ export const PersistentPlayer = () => {
   return (
     <audio
       ref={audioRef}
-      src={STREAM_URL}
-      crossOrigin="anonymous"
-      preload="auto"
       onEnded={() => setIsPlaying(false)}
       onPlay={() => console.log("Streaming iniciado")}
       onError={(e) => {

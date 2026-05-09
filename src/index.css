@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Outfit:wght@400;700;900&display=swap');
 
 @theme {
   --color-brand: #ff007f;
@@ -56,11 +57,43 @@
     100% { transform: translateX(-100%); }
   }
 
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
   .animate-marquee {
     display: inline-block;
     padding-left: 100%;
     animation: marquee 30s linear infinite;
   }
+
+  @keyframes eq {
+    0%, 100% { height: 20%; }
+    50% { height: var(--eq-height, 100%); }
+  }
+
+  .animate-eq {
+    animation: eq var(--eq-dur, 1s) ease-in-out infinite;
+  }
+
+  @keyframes ring-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.05); opacity: 0.9; }
+  }
+
+  .animate-ring-pulse {
+    animation: ring-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes logo-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.05); opacity: 1; }
+  }
+
+  .animate-logo-pulse {
+    animation: logo-pulse 1.5s ease-in-out infinite;
+  }
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Outfit:wght@400;700;900&display=swap');

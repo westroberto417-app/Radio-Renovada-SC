@@ -14,13 +14,13 @@ export const Noticias = () => {
   const [speakingId, setSpeakingId] = useState<number | null>(null);
   const { setIsDucked } = useStore();
 
-  const fetchNews = async () => {
+  const fetchNews = async (force: boolean = false) => {
     setLoading(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setNewsList([]);
     const generatedNews = activeType === 'local' 
-      ? await generateLocalNews() 
-      : await generateNationalNews();
+      ? await generateLocalNews(force) 
+      : await generateNationalNews(force);
     setNewsList(generatedNews);
     setLoading(false);
   };
@@ -90,10 +90,30 @@ export const Noticias = () => {
     setSpeakingId(news.id);
   };
 
+  const handleShare = async (item: LocalNews, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const shareData = {
+      title: item.title,
+      text: `${item.title}\n\r${item.excerpt}\n\rEscucha Radio Corrientes Viva!`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
+        alert('Enlace copiado al portapapeles');
+      }
+    } catch (err) {
+      console.error('Error al compartir:', err);
+    }
+  };
+
   const filteredNews = newsList.filter(news => 
-    news.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    news.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    news.tag.toLowerCase().includes(searchQuery.toLowerCase())
+    news?.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    news?.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    news?.tag?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -133,7 +153,7 @@ export const Noticias = () => {
             </button>
             <div className="w-[1px] h-4 bg-white/10 mx-2" />
             <button 
-              onClick={fetchNews}
+              onClick={() => fetchNews(true)}
               disabled={loading}
               className="p-2.5 text-white/20 hover:text-white transition-colors disabled:opacity-30"
             >
@@ -216,7 +236,12 @@ export const Noticias = () => {
                             {speakingId === item.id ? 'Detener' : 'Voz Natural'}
                           </span>
                         </button>
-                        <Share2 size={16} className="text-white/10 hover:text-white transition-colors cursor-pointer mt-1" />
+                        <button 
+                          onClick={(e) => handleShare(item, e)}
+                          className="hover:bg-white/5 p-1.5 rounded-full transition-colors flex items-center justify-center"
+                        >
+                          <Share2 size={16} className="text-white/20 hover:text-white transition-colors cursor-pointer" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -316,8 +341,11 @@ export const Noticias = () => {
                         {speakingId === selectedNews.id ? <Square fill="currentColor" size={14} /> : <Volume2 size={14} />}
                         {speakingId === selectedNews.id ? 'Detener Voz' : 'Escuchar Noticia'}
                       </button>
-                      <button className="bg-[#ff007f] text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,0,127,0.3)] hidden md:block">
-                        Seguir Tema
+                      <button 
+                        onClick={() => handleShare(selectedNews)}
+                        className="bg-[#ff007f] text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,0,127,0.3)] flex items-center justify-center gap-2 w-full md:w-auto"
+                      >
+                        <Share2 size={14} /> Compartir Noticia
                       </button>
                     </div>
                   </div>

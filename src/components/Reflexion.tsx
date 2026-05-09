@@ -24,28 +24,58 @@ export const Reflexion = () => {
     if (!force && cachedData && cachedTime) {
       const timePassed = Date.now() - parseInt(cachedTime);
       if (timePassed < ONE_HOUR) {
-        setReflection(JSON.parse(cachedData));
-        setLoading(false);
-        return;
+        try {
+          setReflection(JSON.parse(cachedData));
+          setLoading(false);
+          return;
+        } catch (e) {
+          // Si el JSON es inválido, borramos la caché y forzamos nueva carga
+          localStorage.removeItem('daily_reflection');
+          localStorage.removeItem('daily_reflection_time');
+        }
       } else {
         // Interval passed, reset manual refresh count for the new hour
         setRefreshCount(0);
-        localStorage.setItem('reflection_refresh_count', '0');
+        try { localStorage.setItem('reflection_refresh_count', '0'); } catch (e) {}
       }
     }
 
-    const data = await generateReflection();
+    const data = await generateReflection(force);
     setReflection(data);
-    localStorage.setItem('daily_reflection', JSON.stringify(data));
-    localStorage.setItem('daily_reflection_time', Date.now().toString());
+    try {
+      localStorage.setItem('daily_reflection', JSON.stringify(data));
+      localStorage.setItem('daily_reflection_time', Date.now().toString());
+    } catch (e) {}
     
     if (force) {
       const newCount = refreshCount + 1;
       setRefreshCount(newCount);
-      localStorage.setItem('reflection_refresh_count', newCount.toString());
+      try {
+        localStorage.setItem('reflection_refresh_count', newCount.toString());
+      } catch (e) {}
     }
     
     setLoading(false);
+  };
+
+  const handleShare = async () => {
+    if (!reflection) return;
+    const shareData = {
+      title: 'Reflexión del Momento',
+      text: `"${reflection.quote}" — ${reflection.author}\n\r${reflection.message}\n\rEscucha Radio Corrientes Viva!`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
+        alert('Enlace copiado al portapapeles');
+      }
+    } catch (err) {
+      console.error('Error al compartir:', err);
+    }
   };
 
   useEffect(() => {
@@ -130,7 +160,10 @@ export const Reflexion = () => {
                       <button className="flex items-center gap-2 text-[10px] font-black text-white/40 uppercase tracking-widest hover:text-[#ff007f] transition-colors">
                         <Heart size={14} /> 2.4k
                       </button>
-                      <button className="flex items-center gap-2 text-[10px] font-black text-white/40 uppercase tracking-widest hover:text-[#00f2ff] transition-colors">
+                      <button 
+                        onClick={handleShare}
+                        className="flex items-center gap-2 text-[10px] font-black text-white/40 uppercase tracking-widest hover:text-[#00f2ff] transition-colors"
+                      >
                         <Share2 size={14} /> Compartir
                       </button>
                     </div>

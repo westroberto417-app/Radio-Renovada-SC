@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Radio, Send, Play, Settings, AlertCircle, Sparkles, Volume2, RefreshCcw, Save } from 'lucide-react';
+import { Radio, Send, Play, Settings, AlertCircle, Sparkles, Volume2, RefreshCcw, Save, Trash2, History, User, Music } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../lib/utils';
 
@@ -11,66 +11,133 @@ interface RadioBossConfig {
   duckingVol: number;
 }
 
+interface SongRequest {
+  id: number;
+  name: string;
+  song: string;
+  artist: string;
+  message: string;
+  timestamp: string;
+}
+
 export const AdminPanel = () => {
   const [announcementText, setAnnouncementText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [transmissionStatus, setTransmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [showConfig, setShowConfig] = useState(false);
+  const [requests, setRequests] = useState<SongRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   
   const [rbConfig, setRbConfig] = useState<RadioBossConfig>(() => {
-    const saved = localStorage.getItem('rb_config');
-    return saved ? JSON.parse(saved) : { ip: '127.0.0.1:9000', pass: '', enabled: false, duckingVol: 15 };
+    try {
+      const saved = localStorage.getItem('rb_config');
+      return saved ? JSON.parse(saved) : { ip: '127.0.0.1:9000', pass: '', enabled: false, duckingVol: 15 };
+    } catch (e) {
+      return { ip: '127.0.0.1:9000', pass: '', enabled: false, duckingVol: 15 };
+    }
   });
 
   const { setIsDucked } = useStore();
 
   useEffect(() => {
-    localStorage.setItem('rb_config', JSON.stringify(rbConfig));
+    try {
+      localStorage.setItem('rb_config', JSON.stringify(rbConfig));
+    } catch (e) {
+      console.warn("No se pudo guardar la configuración", e);
+    }
   }, [rbConfig]);
 
   useEffect(() => {
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 30000); // Cada 30 seg
     return () => {
       window.speechSynthesis.cancel();
       setIsDucked(false);
+      clearInterval(interval);
     }
   }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const res = await fetch('/api/requests');
+      if (res.ok) {
+        const data = await res.json();
+        setRequests(data);
+      }
+    } catch (e) {
+      console.error("Error fetching requests:", e);
+    }
+  };
+
+  const deleteRequest = async (id: number) => {
+    try {
+      const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setRequests(requests.filter(r => r.id !== id));
+      }
+    } catch (e) {
+      console.error("Error deleting request:", e);
+    }
+  };
+
+  const clearAllRequests = async () => {
+    if (!confirm("¿Seguro que quieres borrar todos los pedidos?")) return;
+    try {
+      const res = await fetch('/api/requests', { method: 'DELETE' });
+      if (res.ok) {
+        setRequests([]);
+      }
+    } catch (e) {
+      console.error("Error clearing requests:", e);
+    }
+  };
 
   const sendRbCommand = async (action: string) => {
     if (!rbConfig.enabled || !rbConfig.ip || !rbConfig.pass) return;
     
     // Si el usuario pone una URL completa (ej. con ngrok https://...), usarla. Si no, asumir http://
-    let baseUrl = rbConfig.ip;
+    let baseUrl = rbConfig.ip.trim();
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
     if (!baseUrl.startsWith('http')) {
       baseUrl = `http://${baseUrl}`;
     }
     
-    const url = `${baseUrl}/?pass=${rbConfig.pass}&action=${action}`;
+    const targetUrl = `${baseUrl}/?pass=${encodeURIComponent(rbConfig.pass)}&action=${action}`;
     
-    console.log("Enviando comando a RadioBoss:", url);
+    // Si es una IP local o localhost, conectamos directo desde el navegador (requiere "permitir contenido no seguro")
+    // Si es ngrok o dominio público, pasamos por el proxy del servidor para evitar problemas de CORS
+    const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1') || baseUrl.includes('192.168.') || baseUrl.includes('10.');
+    
+    console.log("Enviando comando a RadioBoss:", isLocal ? "Directo" : "Vía Proxy", targetUrl);
 
     try {
-      // Intento 1: Fetch estándar
-      await fetch(url, { 
-        method: 'GET',
-        mode: 'no-cors',
-        cache: 'no-cache'
-      });
+      if (isLocal) {
+        // Petición directa (El cliente debe habilitar HTTP mixto)
+        const res = await fetch(targetUrl, { mode: 'no-cors' }); // no-cors sirve para enviar comandos, aunque no leamos la respuesta
+        console.log("Comando local enviado exitosamente.");
+      } else {
+        // Petición por Proxy (Server to Server, sirve para ngrok)
+        const proxyUrl = `/api/rb-proxy?url=${encodeURIComponent(targetUrl)}`;
+        const res = await fetch(proxyUrl);
+        if (!res.ok) {
+          console.warn("Proxy devolvió error HTTP", res.status);
+        } else {
+          console.log("Comando a través del proxy enviado exitosamente.");
+        }
+      }
     } catch (e) {
-      console.warn("Fetch falló (normal en CORS), intentando fallback de imagen...");
-      // Fallback: Crear una imagen invisible. Los navegadores suelen permitir cargar
-      // imágenes de sitios HTTP aunque la página sea HTTPS. 
-      // El comando se ejecutará en RadioBoss aunque la imagen no "cargue" realmente.
-      const img = new Image();
-      img.src = url + `&t=${Date.now()}`;
+      console.error("Error conectando con RadioBoss:", e);
     }
   };
 
   const testConnection = async () => {
     setTransmissionStatus('idle');
-    // Enviamos un comando inofensivo: pedir el nombre del sistema
-    await sendRbCommand('getlibrary');
-    alert("Comando de prueba enviado. Verifica si RadioBoss parpadeó o si algo cambió en el registro de RadioBoss.");
+    // Enviamos un comando inofensivo: pedir información de reproducción
+    await sendRbCommand('playbackinfo');
+    alert("Comando de prueba enviado. Verifica si RadioBoss parpadeó o si algo cambió en el registro de RadioBoss. Si tienes error de autorización (401), revisa que la contraseña sea correcta.");
   };
 
   const handleGenerate = async () => {
@@ -276,6 +343,106 @@ export const AdminPanel = () => {
             </>
           )}
         </button>
+
+        {/* Listener Requests Section */}
+        <div className="space-y-4 pt-4 border-t border-white/5">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#ff007f]/10 flex items-center justify-center text-[#ff007f]">
+                <Music size={20} />
+              </div>
+              <div className="space-y-0.5">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest italic">Pedidos de Oyentes</h3>
+                <p className="text-[10px] text-white/40 font-bold uppercase tracking-tight">
+                  {requests.length} {requests.length === 1 ? 'pedido pendiente' : 'pedidos pendientes'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={fetchRequests}
+                className="p-2 transition-all bg-white/5 text-white/40 hover:text-white rounded-xl"
+                title="Actualizar"
+              >
+                <RefreshCcw size={16} />
+              </button>
+              {requests.length > 0 && (
+                <button 
+                  onClick={clearAllRequests}
+                  className="p-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl"
+                  title="Borrar todo"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {requests.length === 0 ? (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="py-12 bg-white/5 border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center text-center space-y-3"
+                >
+                  <div className="p-3 bg-white/5 rounded-2xl text-white/20">
+                    <History size={24} />
+                  </div>
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest leading-loose">
+                    No hay pedidos <br /> nuevos por ahora
+                  </p>
+                </motion.div>
+              ) : (
+                requests.map((req) => (
+                  <motion.div 
+                    key={req.id}
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="p-5 bg-white/5 border border-white/10 rounded-3xl space-y-3 relative group"
+                  >
+                    <button 
+                      onClick={() => deleteRequest(req.id)}
+                      className="absolute top-4 right-4 p-2 bg-white/5 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 shrink-0">
+                        <User size={18} />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black text-[#ff007f] uppercase tracking-widest">{req.name}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-white italic uppercase tracking-tighter">{req.song}</span>
+                          <span className="text-xs text-white/40">—</span>
+                          <span className="text-xs font-bold text-white/60 uppercase tracking-widest">{req.artist}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {req.message && (
+                      <div className="pl-14">
+                        <p className="text-xs text-white/40 font-medium leading-relaxed italic bg-white/5 p-3 rounded-2xl italic">
+                          "{req.message}"
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="pl-14 flex items-center gap-2">
+                       <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">
+                         {new Date(req.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                       </span>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
         {/* Status indicator */}
         <AnimatePresence>

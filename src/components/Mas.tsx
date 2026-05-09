@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink, Sparkles } from 'lucide-react';
+import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink, Sparkles, Music } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useStore } from '../store/useStore';
 
@@ -54,29 +54,50 @@ export const Mas = () => {
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic underline decoration-red-500 decoration-4 underline-offset-8">Estudio</h2>
-            <p className="text-sm text-white/40">Sistemas técnicos y transmisión.</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic underline decoration-red-500 decoration-4 underline-offset-8">Estudio y Recepción</h2>
+            <p className="text-sm text-white/40">Sistemas técnicos, transmisión y pedidos musicales.</p>
           </div>
           
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveTab('admin')}
-            className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-8 text-left transition-all hover:border-red-500/30 shadow-2xl"
-          >
-            <div className="relative z-10 space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                <Sparkles size={24} className="text-red-500" />
+          <div className="grid grid-cols-1 gap-4">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('pedidos_lista')}
+              className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-6 text-left transition-all hover:border-[#ff007f]/30 shadow-2xl"
+            >
+              <div className="relative z-10 space-y-4 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-[#ff007f]/10 border border-[#ff007f]/20 flex items-center justify-center">
+                  <Music size={24} className="text-[#ff007f]" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black text-white italic uppercase leading-none tracking-tighter">
+                    Bandeja <br />
+                    <span className="text-[#ff007f]">Pedidos</span>
+                  </h3>
+                </div>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter">
-                  Control <br />
-                  <span className="text-red-500">RadioBoss</span>
-                </h3>
-                <p className="text-xs text-white/50 font-medium">Panel de TTS y alertas meteorológicas.</p>
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('donaciones')}
+              className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-6 text-left transition-all hover:border-green-500/30 shadow-2xl"
+            >
+              <div className="relative z-10 space-y-4 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                  <Sparkles size={24} className="text-green-500" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black text-white italic uppercase leading-none tracking-tighter">
+                    Apoyar <br />
+                    <span className="text-green-500">A La Radio</span>
+                  </h3>
+                  <p className="text-xs text-white/50 font-medium pt-1">Donaciones y Sponsors</p>
+                </div>
               </div>
-            </div>
-          </motion.button>
+            </motion.button>
+          </div>
         </div>
 
         <div className="space-y-2">
