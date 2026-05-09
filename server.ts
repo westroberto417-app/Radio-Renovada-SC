@@ -53,31 +53,24 @@ async function startServer() {
   });
   // -------------------------
 
-  let aiClient: any = null;
-  const getAi = async () => {
-    if (!aiClient) {
-      if (!process.env.GEMINI_API_KEY) {
-         throw new Error("GEMINI_API_KEY no está configurado.");
-      }
-      const { GoogleGenAI } = await import("@google/genai");
-      aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    }
-    return aiClient;
-  };
-
   app.post("/api/gemini/chat", async (req, res) => {
     try {
-      const ai = await getAi();
-      const { message, history } = req.body;
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [...(history || []), { role: "user", parts: [{ text: message }] }],
-        config: {
-          systemInstruction: `Eres el asistente de IA de "Radio Corrientes Viva". Tu personalidad es carismática, alegre, cercana y profesional, como un locutor de radio con mucha energía. Saludas con entusiasmo. Estás en San Miguel, Corrientes. Hablas con un tono amigable, usas modismos locales de forma sutil y respetuosa (como "che", "chamigo", "viste"). Tu objetivo es interactuar con los oyentes, responder dudas, comentar sobre la música y mantener el ambiente vibrante. Si te preguntan por noticias, diles que revisen la sección de Noticias para lo último de la región. Mantén tus respuestas breves y directas, como intervenciones al aire.`,
-          temperature: 0.8,
-        }
-      });
-      res.json({ text: response.text });
+      const { message } = req.body;
+      // Respuesta estática temporal para poder publicar la App sin usar cuota de IA de pago.
+      const responses = [
+        "¡Hola chamigo! Qué lindo que estés conectado a Radio Corrientes Viva. ¿De dónde nos estás escuchando?",
+        "¡Qué grande! Esa energía nos encanta. Mandá tu pedido musical y lo intentamos sacar al aire en breve.",
+        "¡Un saludo gigante para vos! Acordate que la mejor compañía está acá, en Corrientes Viva. ¡Subí el volumen!",
+        "Che, ¡gracias por el aguante! Seguimos con la mejor música y toda la info local. ¿Algún saludo especial que quieras dejar?",
+        "¡Buenas buenas! Estamos a full en el estudio. Dejame tu mensaje y en un ratito le pegamos una mirada. ¡Abrazo!"
+      ];
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      
+      // Simulamos un leve retraso para mantener la experiencia de "escribiendo..."
+      setTimeout(() => {
+        res.json({ text: randomResponse });
+      }, 1500);
+      
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
