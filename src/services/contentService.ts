@@ -32,7 +32,7 @@ export interface ChatMessage {
 
 export const getChatResponse = async (message: string, history: ChatMessage[] = []) => {
   try {
-    const res = await fetch('/api/gemini/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, history })
@@ -41,7 +41,7 @@ export const getChatResponse = async (message: string, history: ChatMessage[] = 
     if (!res.ok) throw new Error(data.error);
     return data.text;
   } catch (error) {
-    // Falls back to a generic message if Gemini fails
+    // Falls back to a generic message if API fails
     const fallbacks = [
       "¡Hola chamigo! Aquí estamos firmes al aire en Radio Corrientes Viva. Contame, ¿qué música te gustaría escuchar hoy?",
       "¡Buenas, buenas! Hubo una pequeña interferencia técnica en mi sistema, pero mi corazón sigue con San Miguel. ¿Cómo va tu día?",
@@ -63,7 +63,7 @@ export interface LocalNews {
 }
 
 export const generateLocalNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
-  const cacheKey = "gemini_local_news";
+  const cacheKey = "content_local_news";
   if (!forceRefresh) {
     const cached = getFromCache<LocalNews[]>(cacheKey);
     if (cached) return cached;
@@ -90,7 +90,7 @@ export const generateLocalNews = async (forceRefresh: boolean = false): Promise<
 };
 
 export const generateNationalNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
-  const cacheKey = "gemini_national_news";
+  const cacheKey = "content_national_news";
   if (!forceRefresh) {
     const cached = getFromCache<LocalNews[]>(cacheKey);
     if (cached) return cached;
@@ -117,7 +117,7 @@ export const generateNationalNews = async (forceRefresh: boolean = false): Promi
 };
 
 export const getMarqueeText = async () => {
-  const cacheKey = "gemini_marquee_text_v3";
+  const cacheKey = "content_marquee_text_v3";
   
   try {
     const cachedItem = localStorage.getItem(cacheKey);
@@ -172,7 +172,7 @@ export interface Reflection {
 }
 
 export const generateReflection = async (forceRefresh: boolean = false): Promise<Reflection> => {
-  const cacheKey = "gemini_reflection";
+  const cacheKey = "content_reflection";
   if (!forceRefresh) {
     const cached = getFromCache<Reflection>(cacheKey);
     if (cached) return cached;

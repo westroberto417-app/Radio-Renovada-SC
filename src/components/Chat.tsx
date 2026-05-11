@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, User, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getChatResponse, ChatMessage } from '../services/geminiService';
+import { getChatResponse, ChatMessage } from '../services/contentService';
 import { cn, getArgentinaTime } from '../lib/utils';
 
 export const Chat = () => {

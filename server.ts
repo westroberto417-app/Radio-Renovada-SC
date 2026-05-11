@@ -53,7 +53,7 @@ async function startServer() {
   });
   // -------------------------
 
-  app.post("/api/gemini/chat", async (req, res) => {
+  app.post("/api/chat", async (req, res) => {
     try {
       const { message } = req.body;
       // Respuesta estática temporal para poder publicar la App sin usar cuota de IA de pago.
@@ -193,7 +193,7 @@ async function startServer() {
     res.json(reflection);
   });
 
-// removed /api/gemini/generate
+// removed generation endpoint
 
   // Endpoint para obtener metadatos de la radio
   // Nota: rf.com.ar suele usar este formato para info en tiempo real

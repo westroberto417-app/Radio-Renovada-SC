@@ -3,7 +3,7 @@ import { Play, Pause, Volume2, VolumeX, Info, X, Sparkles, Moon, Share2 } from '
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../store/useStore';
 import { Visualizer } from './Visualizer';
-import { getMarqueeText } from '../services/geminiService';
+import { getMarqueeText } from '../services/contentService';
 import { cn } from '../lib/utils';
 
 const RadioLogo = ({ isPlaying }: { isPlaying: boolean }) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Heart, Quote, RefreshCcw, Share2 } from 'lucide-react';
-import { generateReflection, Reflection } from '../services/geminiService';
+import { generateReflection, Reflection } from '../services/contentService';
 import { cn } from '../lib/utils';
 
 export const Reflexion = () => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Clock, ArrowRight, RefreshCcw, MapPin, Sparkles, Newspaper, Globe, X, Share2, Search, Volume2, Square } from 'lucide-react';
-import { generateLocalNews, generateNationalNews, LocalNews } from '../services/geminiService';
+import { generateLocalNews, generateNationalNews, LocalNews } from '../services/contentService';
 import { cn } from '../lib/utils';
 import { useStore } from '../store/useStore';
 
