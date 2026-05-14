@@ -91,11 +91,11 @@ async function startServer() {
         "https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1474&auto=format&fit=crop"
       ];
       
-      const news = feed.items.slice(0, 6).map((item, index) => ({
+      const news = feed.items.slice(0, 12).map((item, index) => ({
         id: Date.now() + index,
         title: item.title || "Noticia sin título",
-        excerpt: (item.contentSnippet || "").substring(0, 100) + "...",
-        fullContent: item.contentSnippet || item.content || "Contenido no disponible.",
+        excerpt: (item.contentSnippet || "").substring(0, 150) + "...",
+        fullContent: (item.contentSnippet || item.content || "Contenido no disponible.") + "\n\nSigue informado en Radio Corrientes Viva para más detalles sobre lo que sucede en nuestra región.",
         tag: "COMUNIDAD",
         date: item.pubDate ? new Date(item.pubDate).toLocaleDateString("es-AR") : "Hoy",
         image: localImages[index % localImages.length]
@@ -122,11 +122,11 @@ async function startServer() {
         "https://images.unsplash.com/photo-1551076805-e1869043e560?q=80&w=1459&auto=format&fit=crop"
       ];
       
-      const news = feed.items.slice(0, 6).map((item, index) => ({
+      const news = feed.items.slice(0, 12).map((item, index) => ({
         id: Date.now() + 100 + index,
         title: item.title || "Noticia sin título",
-        excerpt: (item.contentSnippet || "").substring(0, 100) + "...",
-        fullContent: item.contentSnippet || item.content || "Contenido no disponible.",
+        excerpt: (item.contentSnippet || "").substring(0, 150) + "...",
+        fullContent: (item.contentSnippet || item.content || "Contenido no disponible.") + "\n\nRadio Corrientes Viva, llevándote la información más relevante de todo el país directamente a tu pantalla.",
         tag: "NACIONAL",
         date: item.pubDate ? new Date(item.pubDate).toLocaleDateString("es-AR") : "Hoy",
         image: nationalImages[index % nationalImages.length]
@@ -143,51 +143,66 @@ async function startServer() {
       {
         quote: "El Señor es mi pastor, nada me faltará.",
         author: "Salmo 23",
-        message: "En los momentos de mayor incertidumbre, recuerda que no caminas solo. Hay una paz que sobrepasa todo entendimiento esperando por ti hoy. Confía en el proceso y en que cada paso que das está guiado por una mano amorosa que nunca te suelta.",
+        message: "En los momentos de mayor incertidumbre, recuerda que no caminas solo. Hay una paz que sobrepasa todo entendimiento esperando por ti hoy. Confía en el proceso y en que cada paso que das está guiado por una mano amorosa que nunca te suelta. San Miguel nos enseña que la fe es nuestro escudo más fuerte.",
         imageUrl: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=1470&auto=format&fit=crop"
       },
       {
         quote: "Sé fuerte y valiente. No temas ni te desanimes.",
         author: "Josué 1:9",
-        message: "A veces el camino se pone cuesta arriba, pero recuerda que las mejores vistas vienen después de las escaladas más difíciles. Tu valentía no es la ausencia de miedo, sino la decisión de seguir adelante a pesar de él.",
+        message: "A veces el camino se pone cuesta arriba, pero recuerda que las mejores vistas vienen después de las escaladas más difíciles. Tu valentía no es la ausencia de miedo, sino la decisión de seguir adelante a pesar de él. Corrientes es tierra de valientes, y hoy es tu día para brillar.",
         imageUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1470&auto=format&fit=crop"
       },
       {
         quote: "Donde hay amor, hay vida.",
         author: "Mahatma Gandhi",
-        message: "El amor es la fuerza más poderosa del universo. Cuando actuamos desde el corazón, transformamos no solo nuestra realidad, sino la de todos los que nos rodean. Hoy, intenta tener un gesto amable con alguien, sin esperar nada a cambio.",
+        message: "El amor es la fuerza más poderosa del universo. Cuando actuamos desde el corazón, transformamos no solo nuestra realidad, sino la de todos los que nos rodean. Hoy, intenta tener un gesto amable con alguien en tu comunidad, sin esperar nada a cambio. Un saludo, una sonrisa, pequeños gestos que hacen grande a nuestra gente.",
         imageUrl: "https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?q=80&w=1470&auto=format&fit=crop"
       },
       {
         quote: "La fe no hace las cosas fáciles, hace las cosas posibles.",
         author: "Lucas 1:37",
-        message: "A veces nos encontramos frente a montañas que parecen imposibles de mover. Pero recuerda que no dependes solo de tus fuerzas. Pon tu carga y tu confianza en manos divinas y observa cómo se abren puertas donde parecía haber solo muros.",
+        message: "A veces nos encontramos frente a montañas que parecen imposibles de mover. Pero recuerda que no dependes solo de tus fuerzas. Pon tu carga y tu confianza en manos divinas y observa cómo se abren puertas donde parecía haber solo muros. Mantengamos la esperanza viva, como nuestra radio.",
         imageUrl: "https://images.unsplash.com/photo-1470071131384-001b85755b36?q=80&w=1470&auto=format&fit=crop"
       },
       {
         quote: "Todo lo que hagáis, hacedlo con amor.",
         author: "1 Corintios 16:14",
-        message: "El ingrediente secreto para que todas las cosas tengan sentido y propósito es el amor. No importa si tu labor es grande o pequeña a los ojos del mundo. Lo que transforma lo ordinario en extraordinario es el amor con el que lo realizas.",
+        message: "El ingrediente secreto para que todas las cosas tengan sentido y propósito es el amor. No importa si tu labor es grande o pequeña a los ojos del mundo. Lo que transforma lo ordinario en extraordinario es el amor con el que lo realizas. Trabajemos hoy con esa pasión correntina que nos caracteriza.",
         imageUrl: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1469&auto=format&fit=crop"
       },
       {
         quote: "El gozo del Señor es nuestra fuerza.",
         author: "Nehemías 8:10",
-        message: "La verdadera alegría no depende de que nuestras circunstancias sean perfectas, sino de saber que tenemos un Dios perfecto que nos cuida. Decide hoy enfocarte en todo lo bueno y permite que su gozo sea el motor que te impulse hacia adelante.",
+        message: "La verdadera alegría no depende de que nuestras circunstancias sean perfectas, sino de saber que tenemos un Dios perfecto que nos cuida. Decide hoy enfocarte en todo lo bueno y permite que su gozo sea el motor que te impulse hacia adelante. ¡Que la música de la vida te acompañe siempre!",
         imageUrl: "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=1470&auto=format&fit=crop"
       },
       {
         quote: "Echa toda tu ansiedad sobre Él, porque Él tiene cuidado de ti.",
         author: "1 Pedro 5:7",
-        message: "Vivimos en un mundo que a menudo nos llena de preocupaciones, pero no fuiste diseñado para cargar con ese peso. Toma un momento hoy, respira profundamente y entrega aquello que te roba la paz.",
+        message: "Vivimos en un mundo que a menudo nos llena de preocupaciones, pero no fuiste diseñado para cargar con ese peso. Toma un momento hoy, respirá profundamente el aire de nuestro pueblo y entregá aquello que te roba la paz. La tranquilidad volverá a tu corazón hoy mismo.",
         imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1473&auto=format&fit=crop"
+      },
+      {
+        quote: "La paciencia es amarga, pero su fruto es dulce.",
+        author: "Jean-Jacques Rousseau",
+        message: "A veces queremos resultados inmediatos, pero las mejores cosas de la vida llevan tiempo para madurar. Como la siembra que espera la lluvia, confiá en que tus esfuerzos darán frutos en el momento justo. Mantené la calma y seguí sembrando bondad.",
+        imageUrl: "https://images.unsplash.com/photo-1475724017573-ad09fb5c613e?q=80&w=1470&auto=format&fit=crop"
+      },
+      {
+        quote: "El éxito no es el final, el fracaso no es fatídico: es el valor para continuar lo que cuenta.",
+        author: "Winston Churchill",
+        message: "No te midas por tus caídas, sino por tu capacidad de levantarte. Cada día es una nueva oportunidad para intentar de nuevo, para mejorar y para ser la mejor versión de vos mismo. No te rindas nunca, chamigo, que el horizonte es grande.",
+        imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1470&auto=format&fit=crop"
       }
     ];
 
     const isRandom = req.query.random === 'true';
-    // Rotar por el día del año o aleatorio
     const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    const index = isRandom ? Math.floor(Math.random() * reflections.length) : (dayOfYear % reflections.length);
+    // Rotar cada 4 horas
+    const currentHour = new Date().getHours();
+    const cycleIndex = Math.floor(currentHour / 4);
+    
+    const index = isRandom ? Math.floor(Math.random() * reflections.length) : ((dayOfYear + cycleIndex) % reflections.length);
     const reflection = reflections[index];
     
     res.json(reflection);

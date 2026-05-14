@@ -1,9 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../lib/utils';
 
 export const PersistentPlayer = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { isPlaying, volume, isMuted, isDucked, setIsPlaying, setTrack, currentTrack } = useStore();
+  const { isPlaying, volume, isMuted, isDucked, setIsPlaying, setTrack, currentTrack, setIsMuted } = useStore();
   const STREAM_URL = 'https://streaming.rf.com.ar/listen/radiocorrientesviva/radio.mp3';
 
   // Polling de metadatos desactivado por solicitud del usuario
@@ -22,9 +25,8 @@ export const PersistentPlayer = () => {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack.title || 'Radio Corrientes Viva',
         artist: currentTrack.artist || 'En Vivo',
-        album: 'Radio Corrientes Viva',
         artwork: [
-          { src: currentTrack.albumArt || 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=512&h=512&fit=crop', sizes: '512x512', type: 'image/jpeg' } // Using a generic radio/music Unsplash image as fallback if logo.png doesn't exist, though we can stick to what was there '/logo.png'
+          { src: currentTrack.albumArt || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=512&h=512&fit=crop', sizes: '512x512', type: 'image/jpeg' }
         ]
       });
     }
@@ -40,8 +42,6 @@ export const PersistentPlayer = () => {
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        // Para radio en vivo, si no tiene src o fue removido, lo volvemos a setear con un timestamp 
-        // para asegurar que conecte a la emisión actual y no reproduzca audio bufferizado (del pasado).
         if (!audioRef.current.src || !audioRef.current.src.includes(STREAM_URL)) {
           audioRef.current.src = STREAM_URL + '?t=' + Date.now();
         }
@@ -51,7 +51,6 @@ export const PersistentPlayer = () => {
           setIsPlaying(false);
         });
 
-        // Media Session API for background/system controls
         if ('mediaSession' in navigator) {
           navigator.mediaSession.setActionHandler('play', () => {
             if (audioRef.current && !audioRef.current.src.includes(STREAM_URL)) {
@@ -62,7 +61,6 @@ export const PersistentPlayer = () => {
           });
           navigator.mediaSession.setActionHandler('pause', () => {
             audioRef.current?.pause();
-            // Descartamos el stream para que no guarde buffer viejo
             if (audioRef.current) {
               audioRef.current.removeAttribute('src');
               audioRef.current.load();
@@ -72,14 +70,12 @@ export const PersistentPlayer = () => {
         }
       } else {
         audioRef.current.pause();
-        // Cuando pausamos radio en vivo, debemos descartar el buffer para no escuchar el pasado al reanudar
         audioRef.current.removeAttribute('src');
         audioRef.current.load();
       }
     }
   }, [isPlaying, setIsPlaying]);
 
-  // Prevent accidental tab closure while playing
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isPlaying) {
@@ -93,16 +89,15 @@ export const PersistentPlayer = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isPlaying]);
 
+  const togglePlay = () => setIsPlaying(!isPlaying);
+  const toggleMute = () => setIsMuted(!isMuted);
+
   return (
     <audio
       ref={audioRef}
       onEnded={() => setIsPlaying(false)}
-      onPlay={() => console.log("Streaming iniciado")}
       onError={(e) => {
         const target = e.target as HTMLAudioElement;
-        console.error("Audio error code:", target.error?.code, "message:", target.error?.message);
-        
-        // Si hay un error de red o de formato, intentamos recargar
         if (isPlaying) {
           setTimeout(() => {
             if (audioRef.current) {
@@ -116,5 +111,4 @@ export const PersistentPlayer = () => {
   );
 };
 
-// Export the audio element ref for the visualizer
 export const getAudioElement = () => document.querySelector('audio');

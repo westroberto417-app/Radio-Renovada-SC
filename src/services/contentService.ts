@@ -2,14 +2,15 @@ interface CacheEntry<T> {
   data: T;
   timestamp: number;
 }
-const TTL_MS = 1000 * 60 * 60 * 3; // 3 hours cache
+const NEWS_TTL_MS = 1000 * 60 * 60 * 3; // 3 hours
+const REFLECTION_TTL_MS = 1000 * 60 * 60 * 4; // 4 hours
 
-const getFromCache = <T>(key: string): T | null => {
+const getFromCache = <T>(key: string, ttl: number): T | null => {
   try {
     const cached = localStorage.getItem(key);
     if (cached) {
       const parsed: CacheEntry<T> = JSON.parse(cached);
-      if (Date.now() - parsed.timestamp < TTL_MS) {
+      if (Date.now() - parsed.timestamp < ttl) {
         return parsed.data;
       }
       localStorage.removeItem(key);
@@ -65,7 +66,7 @@ export interface LocalNews {
 export const generateLocalNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
   const cacheKey = "content_local_news";
   if (!forceRefresh) {
-    const cached = getFromCache<LocalNews[]>(cacheKey);
+    const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
     if (cached) return cached;
   }
   try {
@@ -92,7 +93,7 @@ export const generateLocalNews = async (forceRefresh: boolean = false): Promise<
 export const generateNationalNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
   const cacheKey = "content_national_news";
   if (!forceRefresh) {
-    const cached = getFromCache<LocalNews[]>(cacheKey);
+    const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
     if (cached) return cached;
   }
   try {
@@ -174,7 +175,7 @@ export interface Reflection {
 export const generateReflection = async (forceRefresh: boolean = false): Promise<Reflection> => {
   const cacheKey = "content_reflection";
   if (!forceRefresh) {
-    const cached = getFromCache<Reflection>(cacheKey);
+    const cached = getFromCache<Reflection>(cacheKey, REFLECTION_TTL_MS);
     if (cached) return cached;
   }
   try {
@@ -192,3 +193,4 @@ export const generateReflection = async (forceRefresh: boolean = false): Promise
     };
   }
 };
+
