@@ -42,7 +42,7 @@ const RadioLogo = ({ isPlaying }: { isPlaying: boolean }) => {
 };
 
 export const Inicio = () => {
-  const { isPlaying, setIsPlaying, currentTrack, volume, setVolume, isMuted, setIsMuted } = useStore();
+  const { isPlaying, setIsPlaying, currentTrack, volume, setVolume, isMuted, setIsMuted, isInstallable, installPrompt, setInstallPrompt } = useStore();
   const [showTimerMenu, setShowTimerMenu] = useState(false);
   const [sleepTimer, setSleepTimer] = useState<number | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
@@ -358,6 +358,39 @@ export const Inicio = () => {
             </div>
           </div>
         </div>
+
+        {/* PWA Install Promo CTA */}
+        {isInstallable && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full mt-6 p-4 rounded-2xl bg-gradient-to-r from-[#ff007f]/20 to-[#7c3aed]/20 border border-[#ff007f]/30 flex items-center justify-between gap-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#ff007f]/20 flex items-center justify-center text-[#ff007f]">
+                <Sparkles size={20} />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-black text-white uppercase tracking-tighter italic">Instalar Aplicación</p>
+                <p className="text-[9px] text-white/40 font-medium uppercase tracking-widest">Acceso directo en tu móvil</p>
+              </div>
+            </div>
+            <button 
+              onClick={async () => {
+                if (installPrompt) {
+                  installPrompt.prompt();
+                  const { outcome } = await installPrompt.userChoice;
+                  if (outcome === 'accepted') {
+                    setInstallPrompt(null);
+                  }
+                }
+              }}
+              className="px-4 py-2 bg-[#ff007f] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff007f]/80 transition-all shadow-lg shadow-[#ff007f]/20"
+            >
+              Instalar
+            </button>
+          </motion.div>
+        )}
       </div>
     </div>
   );

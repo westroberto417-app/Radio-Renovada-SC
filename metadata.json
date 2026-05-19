@@ -3,6 +3,7 @@
   "description": "Aplicación oficial de Radio Corrientes Viva con streaming en vivo, visualizador de audio y chat interactivo.",
   "requestFramePermissions": [],
   "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API",
     "Audio Streaming",
     "Real-time Visualization"
   ]

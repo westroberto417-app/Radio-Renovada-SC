@@ -19,7 +19,23 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ScrollToTop } from './components/ScrollToTop';
 
 const App = () => {
-  const { activeTab, setRequestCount } = useStore();
+  const { activeTab, setRequestCount, setInstallPrompt } = useStore();
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setInstallPrompt(e);
+      console.log('PWA Install prompt deferred');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, [setInstallPrompt]);
 
   useEffect(() => {
     const fetchRequestCount = async () => {

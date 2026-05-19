@@ -11,7 +11,16 @@ const socialLinks = [
 ];
 
 export const Mas = () => {
-  const { setActiveTab } = useStore();
+  const { setActiveTab, isInstallable, installPrompt, setInstallPrompt } = useStore();
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-32 px-6 bg-transparent">
@@ -20,6 +29,33 @@ export const Mas = () => {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-8"
       >
+        {/* PWA Install Section */}
+        {isInstallable && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-6 rounded-[2.5rem] bg-gradient-to-br from-[#ff007f] to-[#7c3aed] space-y-4 shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <Sparkles size={80} />
+            </div>
+            <div className="relative z-10 space-y-3">
+              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">
+                Instala la App <br />
+                <span className="text-white/80">En tu móvil</span>
+              </h3>
+              <p className="text-xs text-white/90 font-medium">
+                Accede más rápido y sin necesidad de navegador.
+              </p>
+              <button 
+                onClick={handleInstallClick}
+                className="w-full py-3 bg-white text-[#ff007f] rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-all shadow-lg"
+              >
+                Instalar Ahora
+              </button>
+            </div>
+          </motion.div>
+        )}
         {/* Reflection Section */}
         <div className="space-y-4">
           <div className="space-y-2">
@@ -140,6 +176,7 @@ export const Mas = () => {
             <div className="w-1.5 h-1.5 rounded-full bg-[#ff007f] glow-pink" />
             <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Version 1.0.0</span>
           </div>
+
           <p className="text-[10px] text-white/20 uppercase tracking-widest font-medium">
             Desarrollado para Radio Corrientes Viva
           </p>

@@ -3,6 +3,155 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import fetch from "node-fetch";
 import https from "https";
+import { createRequire } from "module";
+import { GoogleGenAI, Type } from "@google/genai";
+
+const require = createRequire(import.meta.url);
+const archiver = require("archiver");
+
+// Initialize Gemini
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
+
+// --- Content Caches ---
+let localNewsCache: any[] = [];
+let localNewsLastUpdate = 0;
+const NEWS_CACHE_TTL = 1000 * 60 * 60 * 4; // 4 hours
+
+let reflectionsCache: any[] = [];
+let reflectionsLastUpdate = 0;
+const REFLECTIONS_CACHE_TTL = 1000 * 60 * 60 * 5; // 5 hours
+
+async function generateEnhancedLocalNews() {
+  try {
+    const Parser = (await import("rss-parser")).default;
+    const parser = new Parser();
+    // Broadened search to Corrientes and Argentina general news for wider appeal
+    const feed = await parser.parseURL("https://news.google.com/rss/search?q=Corrientes+Argentina+OR+Argentina+Nacional+when:1d&hl=es-419&gl=AR&ceid=AR:es-419");
+    
+    const context = feed.items.slice(0, 15).map(item => ({
+      title: item.title,
+      summary: item.contentSnippet,
+      date: item.pubDate
+    }));
+
+    const prompt = `Como jefe de redacción de "Radio Corrientes Viva", utiliza el siguiente contexto para redactar EXACTAMENTE 10 noticias regionales y nacionales de alto impacto.
+    Contexto RSS: ${JSON.stringify(context)}
+
+    Instrucciones:
+    1. Redacta 10 noticias. Deben ser de interés para alguien en Corrientes pero también en Buenos Aires o el resto del país.
+    2. Cada noticia debe tener un título impactante, un extracto sugerente y un "fullContent" bien desarrollado (mínimo 200 palabras por noticia).
+    3. Usa un lenguaje profesional, cálido y federal.
+    4. El formato de respuesta DEBE ser un JSON válido.
+    5. Asigna una categoría (TAG) adecuada (SOCIEDAD, CULTURA, SALUD, DEPORTES, CLIMA, ECONOMÍA).
+    6. No uses marcadores de markdown en la respuesta, solo el JSON puro.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              excerpt: { type: Type.STRING },
+              fullContent: { type: Type.STRING },
+              tag: { type: Type.STRING },
+              date: { type: Type.STRING }
+            },
+            required: ["title", "excerpt", "fullContent", "tag", "date"]
+          }
+        }
+      }
+    });
+
+    const newsData = JSON.parse(response.text);
+    
+    // Add images
+    const localImages = [
+      "https://images.unsplash.com/photo-1546422904-90eab23c3d7e?q=80&w=1472&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1501167733271-e4f18b5ea3f4?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1474&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1433086966358-54859d0ed716?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=1470&auto=format&fit=crop"
+    ];
+
+    localNewsCache = newsData.map((item: any, index: number) => ({
+      ...item,
+      id: Date.now() + index,
+      image: localImages[index % localImages.length]
+    }));
+    localNewsLastUpdate = Date.now();
+  } catch (error) {
+    console.error("Error generating enhanced news:", error);
+  }
+}
+
+async function generateEnhancedReflections() {
+  try {
+    const prompt = `Eres un guía espiritual de doctrina Evangélica y Bíblica para la audiencia de Radio Corrientes Viva. Tu tarea es generar EXACTAMENTE 7 reflexiones profundas, basadas estrictamente en las Sagradas Escrituras y con un enfoque federal (para todo el país).
+
+    Instrucciones:
+    1. Cada reflexión debe tener una cita (quote) bíblica (use la versión Reina Valera 1960), un autor (el pasaje bíblico o un predicador evangélico reconocido) y un mensaje (message) largo y significativo (mínimo 150 palabras) que dé consuelo, esperanza y edificación espiritual.
+    2. Evita rituales o menciones católicas. Enfócate en la relación personal con Cristo, la salvación, la gracia, la fe y la fortaleza espiritual.
+    3. NO menciones una localidad específica (como San Miguel) para que el mensaje sea recibido por igual en Buenos Aires, Córdoba o Corrientes. 
+    4. El formato de respuesta DEBE ser un JSON válido.
+    5. No uses marcadores de markdown.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              quote: { type: Type.STRING },
+              author: { type: Type.STRING },
+              message: { type: Type.STRING }
+            },
+            required: ["quote", "author", "message"]
+          }
+        }
+      }
+    });
+
+    const reflectionData = JSON.parse(response.text);
+    const reflectionImages = [
+      "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1470071131384-001b85755b36?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1469&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=1470&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1473&auto=format&fit=crop"
+    ];
+
+    reflectionsCache = reflectionData.map((item: any, index: number) => ({
+      ...item,
+      imageUrl: reflectionImages[index % reflectionImages.length]
+    }));
+    reflectionsLastUpdate = Date.now();
+  } catch (error) {
+    console.error("Error generating enhanced reflections:", error);
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -78,31 +227,38 @@ async function startServer() {
 
   app.get("/api/news/local", async (req, res) => {
     try {
-      const Parser = (await import("rss-parser")).default;
-      const parser = new Parser();
-      const feed = await parser.parseURL("https://news.google.com/rss/search?q=Corrientes+Argentina+when:1d&hl=es-419&gl=AR&ceid=AR:es-419");
+      const forceRefresh = req.query.force === 'true';
+      if (forceRefresh || localNewsCache.length === 0 || (Date.now() - localNewsLastUpdate > NEWS_CACHE_TTL)) {
+        await generateEnhancedLocalNews();
+      }
       
-      const localImages = [
-        "https://images.unsplash.com/photo-1546422904-90eab23c3d7e?q=80&w=1472&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=1470&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=1470&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1501167733271-e4f18b5ea3f4?q=80&w=1470&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?q=80&w=1470&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1474&auto=format&fit=crop"
-      ];
-      
-      const news = feed.items.slice(0, 12).map((item, index) => ({
-        id: Date.now() + index,
-        title: item.title || "Noticia sin título",
-        excerpt: (item.contentSnippet || "").substring(0, 150) + "...",
-        fullContent: (item.contentSnippet || item.content || "Contenido no disponible.") + "\n\nSigue informado en Radio Corrientes Viva para más detalles sobre lo que sucede en nuestra región.",
-        tag: "COMUNIDAD",
-        date: item.pubDate ? new Date(item.pubDate).toLocaleDateString("es-AR") : "Hoy",
-        image: localImages[index % localImages.length]
-      }));
-      res.json(news);
+      // If still empty (AI failed), fallback to direct RSS with basic mapping
+      if (localNewsCache.length === 0) {
+        const Parser = (await import("rss-parser")).default;
+        const parser = new Parser();
+        const feed = await parser.parseURL("https://news.google.com/rss/search?q=Corrientes+Argentina+when:1d&hl=es-419&gl=AR&ceid=AR:es-419");
+        
+        const localImages = [
+          "https://images.unsplash.com/photo-1546422904-90eab23c3d7e?q=80&w=1472&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?q=80&w=1470&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=1470&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1501167733271-e4f18b5ea3f4?q=80&w=1470&auto=format&fit=crop"
+        ];
+        
+        localNewsCache = feed.items.slice(0, 10).map((item, index) => ({
+          id: Date.now() + index,
+          title: item.title || "Noticia Regional",
+          excerpt: (item.contentSnippet || "").substring(0, 150) + "...",
+          fullContent: (item.contentSnippet || "Amplía la información sintonizando Radio Corrientes Viva."),
+          tag: "INTERÉS GENERAL",
+          date: item.pubDate ? new Date(item.pubDate).toLocaleDateString("es-AR") : "Hoy",
+          image: localImages[index % localImages.length]
+        }));
+      }
+
+      res.json(localNewsCache);
     } catch (error: any) {
-      console.error("Local news RSS error:", error);
+      console.error("Local news error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -138,74 +294,37 @@ async function startServer() {
     }
   });
 
-  app.get("/api/reflections", (req, res) => {
-    const reflections = [
-      {
-        quote: "El Señor es mi pastor, nada me faltará.",
-        author: "Salmo 23",
-        message: "En los momentos de mayor incertidumbre, recuerda que no caminas solo. Hay una paz que sobrepasa todo entendimiento esperando por ti hoy. Confía en el proceso y en que cada paso que das está guiado por una mano amorosa que nunca te suelta. San Miguel nos enseña que la fe es nuestro escudo más fuerte.",
-        imageUrl: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=1470&auto=format&fit=crop"
-      },
-      {
-        quote: "Sé fuerte y valiente. No temas ni te desanimes.",
-        author: "Josué 1:9",
-        message: "A veces el camino se pone cuesta arriba, pero recuerda que las mejores vistas vienen después de las escaladas más difíciles. Tu valentía no es la ausencia de miedo, sino la decisión de seguir adelante a pesar de él. Corrientes es tierra de valientes, y hoy es tu día para brillar.",
-        imageUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1470&auto=format&fit=crop"
-      },
-      {
-        quote: "Donde hay amor, hay vida.",
-        author: "Mahatma Gandhi",
-        message: "El amor es la fuerza más poderosa del universo. Cuando actuamos desde el corazón, transformamos no solo nuestra realidad, sino la de todos los que nos rodean. Hoy, intenta tener un gesto amable con alguien en tu comunidad, sin esperar nada a cambio. Un saludo, una sonrisa, pequeños gestos que hacen grande a nuestra gente.",
-        imageUrl: "https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?q=80&w=1470&auto=format&fit=crop"
-      },
-      {
-        quote: "La fe no hace las cosas fáciles, hace las cosas posibles.",
-        author: "Lucas 1:37",
-        message: "A veces nos encontramos frente a montañas que parecen imposibles de mover. Pero recuerda que no dependes solo de tus fuerzas. Pon tu carga y tu confianza en manos divinas y observa cómo se abren puertas donde parecía haber solo muros. Mantengamos la esperanza viva, como nuestra radio.",
-        imageUrl: "https://images.unsplash.com/photo-1470071131384-001b85755b36?q=80&w=1470&auto=format&fit=crop"
-      },
-      {
-        quote: "Todo lo que hagáis, hacedlo con amor.",
-        author: "1 Corintios 16:14",
-        message: "El ingrediente secreto para que todas las cosas tengan sentido y propósito es el amor. No importa si tu labor es grande o pequeña a los ojos del mundo. Lo que transforma lo ordinario en extraordinario es el amor con el que lo realizas. Trabajemos hoy con esa pasión correntina que nos caracteriza.",
-        imageUrl: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?q=80&w=1469&auto=format&fit=crop"
-      },
-      {
-        quote: "El gozo del Señor es nuestra fuerza.",
-        author: "Nehemías 8:10",
-        message: "La verdadera alegría no depende de que nuestras circunstancias sean perfectas, sino de saber que tenemos un Dios perfecto que nos cuida. Decide hoy enfocarte en todo lo bueno y permite que su gozo sea el motor que te impulse hacia adelante. ¡Que la música de la vida te acompañe siempre!",
-        imageUrl: "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?q=80&w=1470&auto=format&fit=crop"
-      },
-      {
-        quote: "Echa toda tu ansiedad sobre Él, porque Él tiene cuidado de ti.",
-        author: "1 Pedro 5:7",
-        message: "Vivimos en un mundo que a menudo nos llena de preocupaciones, pero no fuiste diseñado para cargar con ese peso. Toma un momento hoy, respirá profundamente el aire de nuestro pueblo y entregá aquello que te roba la paz. La tranquilidad volverá a tu corazón hoy mismo.",
-        imageUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1473&auto=format&fit=crop"
-      },
-      {
-        quote: "La paciencia es amarga, pero su fruto es dulce.",
-        author: "Jean-Jacques Rousseau",
-        message: "A veces queremos resultados inmediatos, pero las mejores cosas de la vida llevan tiempo para madurar. Como la siembra que espera la lluvia, confiá en que tus esfuerzos darán frutos en el momento justo. Mantené la calma y seguí sembrando bondad.",
-        imageUrl: "https://images.unsplash.com/photo-1475724017573-ad09fb5c613e?q=80&w=1470&auto=format&fit=crop"
-      },
-      {
-        quote: "El éxito no es el final, el fracaso no es fatídico: es el valor para continuar lo que cuenta.",
-        author: "Winston Churchill",
-        message: "No te midas por tus caídas, sino por tu capacidad de levantarte. Cada día es una nueva oportunidad para intentar de nuevo, para mejorar y para ser la mejor versión de vos mismo. No te rindas nunca, chamigo, que el horizonte es grande.",
-        imageUrl: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1470&auto=format&fit=crop"
+  app.get("/api/reflections", async (req, res) => {
+    try {
+      const forceRefresh = req.query.force === 'true';
+      if (forceRefresh || reflectionsCache.length === 0 || (Date.now() - reflectionsLastUpdate > REFLECTIONS_CACHE_TTL)) {
+        await generateEnhancedReflections();
       }
-    ];
 
-    const isRandom = req.query.random === 'true';
-    const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-    // Rotar cada 4 horas
-    const currentHour = new Date().getHours();
-    const cycleIndex = Math.floor(currentHour / 4);
-    
-    const index = isRandom ? Math.floor(Math.random() * reflections.length) : ((dayOfYear + cycleIndex) % reflections.length);
-    const reflection = reflections[index];
-    
-    res.json(reflection);
+      // Rollback hardcoded reflections as ultimate fallback
+      if (reflectionsCache.length === 0) {
+        reflectionsCache = [
+          {
+            quote: "El Señor es mi pastor, nada me faltará.",
+            author: "Salmo 23",
+            message: "En los momentos de mayor incertidumbre, recuerda que no caminas solo. Hay una paz que sobrepasa todo entendimiento esperando por ti hoy. Confía en el proceso y en que cada paso que das está guiado por una mano amorosa que nunca te suelta. San Miguel nos enseña que la fe es nuestro escudo más fuerte.",
+            imageUrl: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=1470&auto=format&fit=crop"
+          }
+        ];
+      }
+
+      const isRandom = req.query.random === 'true';
+      // Rotation logic: current hour window
+      const currentHour = new Date().getHours();
+      const currentCycle = Math.floor(currentHour / 5); // 5 hours rotate
+      
+      const index = isRandom ? Math.floor(Math.random() * reflectionsCache.length) : (currentCycle % reflectionsCache.length);
+      const reflection = reflectionsCache[index];
+      
+      res.json(reflection);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
 // removed generation endpoint
@@ -213,18 +332,7 @@ async function startServer() {
   // Endpoint para obtener metadatos de la radio
   // Nota: rf.com.ar suele usar este formato para info en tiempo real
   
-  // PWA Essentials: Serve Service Worker and Manifest explicitly to avoid redirects
-  app.get("/sw.js", (req, res) => {
-    res.setHeader("Service-Worker-Allowed", "/");
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.sendFile(path.join(process.cwd(), "public", "sw.js"));
-  });
-
-  app.get("/manifest.json", (req, res) => {
-    res.sendFile(path.join(process.cwd(), "public", "manifest.json"));
-  });
-
-  // Explicitly serve static files from public folder without redirects
+  // Explicitly serve static files from public folder
   app.use(express.static(path.join(process.cwd(), 'public'), { redirect: false }));
 
   console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);

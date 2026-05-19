@@ -12,18 +12,35 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true
+        },
         manifest: {
           name: 'Radio Corrientes Viva',
           short_name: 'Corrientes Viva',
-          description: 'La mejor música y noticias de San Miguel',
-          theme_color: '#EF4444',
-          background_color: '#ffffff',
+          description: 'La mejor música y noticias de San Miguel, Corrientes en vivo.',
+          theme_color: '#ff007f',
+          background_color: '#0a0b1e',
           display: 'standalone',
+          orientation: 'portrait',
+          scope: '/',
+          start_url: '/',
           icons: [
             {
               src: 'https://cdn-icons-png.flaticon.com/512/3254/3254060.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any maskable'
+            },
+            {
+              src: 'https://cdn-icons-png.flaticon.com/512/3254/3254060.png',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any maskable'
             }
           ]
         }

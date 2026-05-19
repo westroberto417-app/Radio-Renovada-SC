@@ -14,6 +14,8 @@ interface AppState {
     albumArt?: string;
   };
   requestCount: number;
+  installPrompt: any;
+  isInstallable: boolean;
   setActiveTab: (tab: Tab) => void;
   setIsPlaying: (playing: boolean) => void;
   setVolume: (volume: number) => void;
@@ -21,6 +23,7 @@ interface AppState {
   setIsDucked: (ducked: boolean) => void;
   setTrack: (track: { title: string; artist: string; albumArt?: string }) => void;
   setRequestCount: (count: number) => void;
+  setInstallPrompt: (prompt: any) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -30,6 +33,8 @@ export const useStore = create<AppState>((set) => ({
   isMuted: false,
   isDucked: false,
   requestCount: 0,
+  installPrompt: null,
+  isInstallable: false,
   currentTrack: {
     title: 'Radio Corrientes Viva',
     artist: 'En Vivo',
@@ -41,4 +46,5 @@ export const useStore = create<AppState>((set) => ({
   setIsDucked: (ducked) => set({ isDucked: ducked }),
   setTrack: (track) => set({ currentTrack: track }),
   setRequestCount: (count) => set({ requestCount: count }),
+  setInstallPrompt: (prompt) => set({ installPrompt: prompt, isInstallable: !!prompt }),
 }));

@@ -70,7 +70,7 @@ export const generateLocalNews = async (forceRefresh: boolean = false): Promise<
     if (cached) return cached;
   }
   try {
-    const res = await fetch('/api/news/local');
+    const res = await fetch(`/api/news/local?force=${forceRefresh}`);
     if (!res.ok) throw new Error("Backend news local failed");
     const data = await res.json();
     if (data && data.length > 0) saveToCache(cacheKey, data);
@@ -179,7 +179,7 @@ export const generateReflection = async (forceRefresh: boolean = false): Promise
     if (cached) return cached;
   }
   try {
-    const res = await fetch(`/api/reflections?random=${forceRefresh}`);
+    const res = await fetch(`/api/reflections?force=${forceRefresh}&random=${forceRefresh}`);
     if (!res.ok) throw new Error("Backend reflection failed");
     const info = await res.json();
     if (info.quote) saveToCache(cacheKey, info);
