@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Music, Star, Send, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useStore } from '../store/useStore';
 
 export const PedirTema = () => {
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: '', song: '', artist: '', message: '' });
+  const fetchRequests = useStore((state) => state.fetchRequests);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,6 +19,8 @@ export const PedirTema = () => {
       
       if (response.ok) {
         setSent(true);
+        // Refresh requests list in store immediately
+        await fetchRequests();
         setTimeout(() => setSent(false), 5000);
         setForm({ name: '', song: '', artist: '', message: '' });
       } else {

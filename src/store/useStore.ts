@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 
-export type Tab = 'inicio' | 'chat' | 'pedir' | 'noticias' | 'mas' | 'admin' | 'sumate' | 'aplicacion' | 'reflexion' | 'pedidos_lista' | 'programacion' | 'donaciones';
+export type Tab = 'inicio' | 'chat' | 'pedir' | 'noticias' | 'mas' | 'admin' | 'sumate' | 'aplicacion' | 'reflexion' | 'pedidos_lista' | 'programacion' | 'donaciones' | 'video';
+
+export interface SongRequest {
+  id: number;
+  name: string;
+  song: string;
+  artist: string;
+  message: string;
+  timestamp: string;
+}
 
 interface AppState {
   activeTab: Tab;
@@ -16,6 +25,7 @@ interface AppState {
   requestCount: number;
   installPrompt: any;
   isInstallable: boolean;
+  requests: SongRequest[];
   setActiveTab: (tab: Tab) => void;
   setIsPlaying: (playing: boolean) => void;
   setVolume: (volume: number) => void;
@@ -24,6 +34,9 @@ interface AppState {
   setTrack: (track: { title: string; artist: string; albumArt?: string }) => void;
   setRequestCount: (count: number) => void;
   setInstallPrompt: (prompt: any) => void;
+  fetchRequests: () => Promise<void>;
+  deleteRequest: (id: number) => Promise<void>;
+  clearAllRequests: () => Promise<void>;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -35,6 +48,7 @@ export const useStore = create<AppState>((set) => ({
   requestCount: 0,
   installPrompt: null,
   isInstallable: false,
+  requests: [],
   currentTrack: {
     title: 'Radio Corrientes Viva',
     artist: 'En Vivo',
@@ -47,4 +61,38 @@ export const useStore = create<AppState>((set) => ({
   setTrack: (track) => set({ currentTrack: track }),
   setRequestCount: (count) => set({ requestCount: count }),
   setInstallPrompt: (prompt) => set({ installPrompt: prompt, isInstallable: !!prompt }),
+  fetchRequests: async () => {
+    try {
+      const res = await fetch('/api/requests');
+      if (res.ok) {
+        const data = await res.json();
+        set({ requests: data, requestCount: data.length });
+      }
+    } catch (e) {
+      console.error("Error fetching requests in store:", e);
+    }
+  },
+  deleteRequest: async (id) => {
+    try {
+      const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        set((state) => {
+          const updated = state.requests.filter(r => r.id !== id);
+          return { requests: updated, requestCount: updated.length };
+        });
+      }
+    } catch (e) {
+      console.error("Error deleting request in store:", e);
+    }
+  },
+  clearAllRequests: async () => {
+    try {
+      const res = await fetch('/api/requests', { method: 'DELETE' });
+      if (res.ok) {
+        set({ requests: [], requestCount: 0 });
+      }
+    } catch (e) {
+      console.error("Error clearing requests in store:", e);
+    }
+  },
 }));

@@ -1,42 +1,101 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Info, X, Sparkles, Moon, Share2 } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Sparkles, Moon, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../store/useStore';
-import { Visualizer } from './Visualizer';
 import { getMarqueeText } from '../services/contentService';
 import { cn } from '../lib/utils';
 
 const RadioLogo = ({ isPlaying }: { isPlaying: boolean }) => {
   const [logoError, setLogoError] = useState(false);
+  const [albumArtError, setAlbumArtError] = useState(false);
   const logoUrl = "/logo.png"; // Ruta esperada para el logo del usuario
+  const { currentTrack } = useStore();
+
+  const isGeneric = !currentTrack.title || 
+                    currentTrack.title === 'Radio Corrientes Viva' || 
+                    currentTrack.title === 'Transmitiendo en Vivo' || 
+                    currentTrack.artist === 'Radio Corrientes Viva' || 
+                    currentTrack.artist === 'En Vivo';
+
+  const showAlbumArt = currentTrack.albumArt && !isGeneric && !albumArtError;
+
+  useEffect(() => {
+    setAlbumArtError(false);
+  }, [currentTrack.albumArt]);
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center text-white overflow-hidden">
-      <div className="relative z-10 flex flex-col items-center w-full h-full justify-center">
-        <div 
-          className={cn(
-            "w-full h-full flex items-center justify-center p-6 transition-all",
-            isPlaying ? "animate-logo-pulse" : "opacity-100 scale-100"
-          )}
-        >
-          {!logoError ? (
-            <img 
-              src={logoUrl} 
-              alt="Radio Logo" 
-              className="w-full h-full object-contain"
-              onError={() => setLogoError(true)}
+      <AnimatePresence mode="wait">
+        {showAlbumArt ? (
+          <motion.div
+            key="album-art"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 w-full h-full flex items-center justify-center"
+          >
+            {/* Blurry glow background using the album cover itself */}
+            <div 
+              className="absolute inset-0 bg-cover bg-center blur-md opacity-30 scale-110"
+              style={{ backgroundImage: `url(${currentTrack.albumArt})` }}
             />
-          ) : (
-            <div className="w-32 h-32 bg-[#ff007f]/20 rounded-full flex items-center justify-center border border-[#ff007f]/50">
-              <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" x2="12" y1="19" y2="22"/>
-              </svg>
+            
+            {/* Album cover art */}
+            <img 
+              src={currentTrack.albumArt} 
+              alt={currentTrack.title}
+              className="w-full h-full object-cover relative z-10"
+              onError={() => setAlbumArtError(true)}
+              referrerPolicy="no-referrer"
+            />
+
+            {/* Title Overlay badge inside the disc */}
+            <div className="absolute bottom-4 left-3 right-3 z-30 bg-black/75 border border-white/10 backdrop-blur-md p-2 rounded-2xl flex flex-col items-center justify-center text-center">
+              <span className="text-[7px] uppercase tracking-[0.25em] font-black text-[#ff007f] mb-0.5 animate-pulse">
+                Sonar Acoplado
+              </span>
+              <p className="text-[10px] font-black uppercase tracking-wider text-white truncate max-w-[150px]">
+                {currentTrack.title}
+              </p>
             </div>
-          )}
-        </div>
-      </div>
+            
+            {/* Small floating logo watermark */}
+            <div className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/60 border border-white/10 p-1.5 backdrop-blur-md">
+              <img src={logoUrl} alt="Mini Logo" className="w-full h-full object-contain" />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="radio-logo"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 w-full h-full flex items-center justify-center p-6"
+          >
+            {!logoError ? (
+              <img 
+                src={logoUrl} 
+                alt="Radio Logo" 
+                className={cn(
+                  "w-full h-full object-contain transition-all",
+                  isPlaying ? "animate-logo-pulse" : "opacity-100 scale-100"
+                )}
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <div className="w-32 h-32 bg-[#ff007f]/20 rounded-full flex items-center justify-center border border-[#ff007f]/50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -95,7 +154,7 @@ export const Inicio = () => {
         </div>
 
         {/* Linear Waveform Visualizer */}
-        <div className="w-full h-12 flex items-center justify-center gap-1 mb-8 px-4">
+        <div className="w-full h-12 flex items-center justify-center gap-1 mb-8 px-4 font-sans">
            {Array.from({ length: 20 }).map((_, i) => (
              <div
                key={i}
@@ -113,7 +172,7 @@ export const Inicio = () => {
         </div>
 
         {/* Track Info */}
-        <div className="text-center mb-10 space-y-1 w-full scale-110">
+        <div className="text-center mb-10 space-y-1 w-full scale-110 font-sans">
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -151,7 +210,7 @@ export const Inicio = () => {
             <button 
               onClick={() => setShowTimerMenu(!showTimerMenu)}
               className={cn(
-                "p-2 transition-all rounded-full",
+                "p-2 transition-all rounded-full cursor-pointer",
                 sleepTimer ? "text-[#ff007f] bg-[#ff007f]/10 shadow-[0_0_10px_#ff007f]" : "text-white/40 hover:text-white"
               )}
               title="Temporizador de apagado"
@@ -173,7 +232,7 @@ export const Inicio = () => {
                         setSleepTimer(mins);
                         setShowTimerMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-[#ff007f] hover:bg-white/5 rounded-lg transition-colors"
+                      className="w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-[#ff007f] hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                     >
                       {mins} MINUTOS
                     </button>
@@ -184,7 +243,7 @@ export const Inicio = () => {
                         setSleepTimer(null);
                         setShowTimerMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#ff007f] hover:bg-[#ff007f]/10 rounded-lg transition-colors border-t border-white/5 mt-1"
+                      className="w-full text-left px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#ff007f] hover:bg-[#ff007f]/10 rounded-lg transition-colors border-t border-white/5 mt-1 cursor-pointer"
                     >
                       CANCELAR
                     </button>
@@ -198,13 +257,9 @@ export const Inicio = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              if (isPlaying) {
-                setIsPlaying(false);
-              } else {
-                setIsPlaying(true);
-              }
+              setIsPlaying(!isPlaying);
             }}
-            className="w-24 h-24 bg-[#ff007f] rounded-full flex items-center justify-center text-white neon-pink transition-all shadow-[0_0_30px_rgba(255,0,127,0.5)]"
+            className="w-24 h-24 bg-[#ff007f] rounded-full flex items-center justify-center text-white neon-pink transition-all shadow-[0_0_30px_rgba(255,0,127,0.5)] cursor-pointer"
           >
             {isPlaying ? <Pause size={42} fill="white" /> : <Play size={42} fill="white" className="ml-1" />}
           </motion.button>
@@ -221,14 +276,12 @@ export const Inicio = () => {
                 } catch (err) {
                   console.error('Error sharing:', err);
                   navigator.clipboard.writeText(window.location.href);
-                  alert('Enlace copiado al portapapeles');
                 }
               } else {
                 navigator.clipboard.writeText(window.location.href);
-                alert('Enlace copiado al portapapeles');
               }
             }}
-            className="p-2 text-white/40 hover:text-white transition-all"
+            className="p-2 text-white/40 hover:text-white transition-all cursor-pointer"
           >
             <Share2 size={28} />
           </button>
@@ -241,13 +294,13 @@ export const Inicio = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="mb-8 flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md"
+              className="mb-8 flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md font-sans"
             >
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/60">Transmisión Activa</span>
               <button 
                 onClick={() => setShowExitModal(true)}
-                className="ml-2 text-[9px] font-black uppercase tracking-widest text-[#ff007f] hover:underline"
+                className="ml-2 text-[9px] font-black uppercase tracking-widest text-[#ff007f] hover:underline cursor-pointer"
               >
                 Detener
               </button>
@@ -263,7 +316,7 @@ export const Inicio = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowExitModal(false)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6 font-sans"
             >
               <motion.div
                 initial={{ scale: 0.9, y: 20 }}
@@ -279,13 +332,13 @@ export const Inicio = () => {
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={() => setShowExitModal(false)}
-                    className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest transition-all border border-white/5"
+                    className="w-full py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest transition-all border border-white/5 cursor-pointer"
                   >
                     Continuar Escuchando
                   </button>
                   <button
                     onClick={() => setShowExitModal(false)}
-                    className="w-full py-4 bg-[#ff007f]/10 hover:bg-[#ff007f]/20 rounded-2xl text-[10px] font-black text-[#ff007f] uppercase tracking-widest transition-all border border-[#ff007f]/20"
+                    className="w-full py-4 bg-[#ff007f]/10 hover:bg-[#ff007f]/20 rounded-2xl text-[10px] font-black text-[#ff007f] uppercase tracking-widest transition-all border border-[#ff007f]/20 cursor-pointer"
                   >
                     Minimizar
                   </button>
@@ -294,7 +347,7 @@ export const Inicio = () => {
                       setIsPlaying(false);
                       window.location.reload(); // Simple exit behavior for web env
                     }}
-                    className="w-full py-4 bg-red-500/10 hover:bg-red-500/20 rounded-2xl text-[10px] font-black text-red-500 uppercase tracking-widest transition-all border border-red-500/20"
+                    className="w-full py-4 bg-red-500/10 hover:bg-red-500/20 rounded-2xl text-[10px] font-black text-red-500 uppercase tracking-widest transition-all border border-red-500/20 cursor-pointer"
                   >
                     Salir de la App
                   </button>
@@ -305,8 +358,8 @@ export const Inicio = () => {
         </AnimatePresence>
 
         {/* Volume & Details Bar */}
-        <div className="w-full flex items-center gap-4 px-2 mb-6">
-           <button onClick={() => setIsMuted(!isMuted)} className="text-white/40">
+        <div className="w-full flex items-center gap-4 px-2 mb-6 font-sans">
+           <button onClick={() => setIsMuted(!isMuted)} className="text-white/40 cursor-pointer">
              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
            </button>
            <div className="flex-1 h-[2px] bg-white/10 relative rounded-full">
@@ -331,7 +384,7 @@ export const Inicio = () => {
         </div>
 
         {/* Marquee Schedule */}
-        <div className="w-full mt-4 mb-2">
+        <div className="w-full mt-4 mb-2 font-sans">
           <h3 className="text-[10px] md:text-xs uppercase tracking-widest text-white/50 font-bold mb-3 px-3 flex items-center gap-2">
             <Sparkles size={14} className="text-white/40" />
             Programación Sonando
@@ -359,46 +412,62 @@ export const Inicio = () => {
           </div>
         </div>
 
-        {/* PWA Install Promo CTA */}
-        {isInstallable && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full mt-6 p-4 rounded-2xl bg-gradient-to-r from-[#ff007f]/20 to-[#7c3aed]/20 border border-[#ff007f]/30 flex items-center justify-between gap-4"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#ff007f]/20 flex items-center justify-center text-[#ff007f]">
-                <Sparkles size={20} />
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-[10px] font-black text-white uppercase tracking-tighter italic">Instalar Aplicación</p>
-                <p className="text-[9px] text-white/40 font-medium uppercase tracking-widest">Acceso directo en tu móvil</p>
-              </div>
+        {/* Custom Visible Mobile Install Box */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full mt-4 p-5 rounded-[2rem] bg-zinc-950/70 border border-[#ff007f]/30 backdrop-blur-md shadow-lg flex flex-col gap-4 relative overflow-hidden font-sans"
+        >
+          {/* Subtle Glow background */}
+          <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-[#ff007f]/10 blur-2xl pointer-events-none" />
+
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#ff007f]/10 border border-[#ff007f]/20 flex items-center justify-center text-[#ff007f] shrink-0">
+              <Sparkles size={18} className="text-glow-pink animate-pulse" />
             </div>
-            <button 
-              onClick={async () => {
-                if (installPrompt) {
-                  installPrompt.prompt();
-                  const { outcome } = await installPrompt.userChoice;
-                  if (outcome === 'accepted') {
-                    setInstallPrompt(null);
+            <div className="space-y-0.5">
+              <h4 className="text-[11px] font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                Instalar App en tu Celular
+                <span className="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest leading-none">PWA</span>
+              </h4>
+              <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest leading-tight">
+                Lleva Radio Corrientes Viva siempre contigo en tu pantalla de inicio
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-white/5 pt-3.5 flex flex-col gap-2.5 text-left">
+            {isInstallable ? (
+              <button 
+                onClick={async () => {
+                  if (installPrompt) {
+                    installPrompt.prompt();
+                    const { outcome } = await installPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                      setInstallPrompt(null);
+                    }
                   }
-                }
-              }}
-              className="px-4 py-2 bg-[#ff007f] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff007f]/80 transition-all shadow-lg shadow-[#ff007f]/20"
-            >
-              Instalar
-            </button>
-          </motion.div>
-        )}
+                }}
+                className="w-full py-3 bg-[#ff007f] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff007f]/80 transition-all shadow-lg active:scale-95 cursor-pointer text-center"
+              >
+                ¡Instalar en un Click!
+              </button>
+            ) : (
+              <div className="text-[9px] text-white/50 uppercase tracking-widest space-y-1.5 font-bold leading-normal">
+                <p className="text-[#00f2ff] text-glow-cyan text-[10px] mb-1">Guía Rápida de Instalación Manual:</p>
+                <div className="flex items-start gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff007f] mt-1 shrink-0" />
+                  <span>En iPhone/iOS: Pulsa <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">Compartir ↑</span> y luego <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">“Agregar a Inicio”.</span></span>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff007f] mt-1 shrink-0" />
+                  <span>Android/Chrome: Toca <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">opciones ⋮</span> y pulsa <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">“Instalar aplicación”.</span></span>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
       </div>
     </div>
   );
 };
-
-const Radio = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.4"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.4"/><path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/>
-  </svg>
-);
-

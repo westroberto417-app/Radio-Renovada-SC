@@ -90,6 +90,33 @@ export const generateLocalNews = async (forceRefresh: boolean = false): Promise<
   }
 };
 
+export const generateProvincialNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
+  const cacheKey = "content_provincial_news";
+  if (!forceRefresh) {
+    const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
+    if (cached) return cached;
+  }
+  try {
+    const res = await fetch(`/api/news/provincial?force=${forceRefresh}`);
+    if (!res.ok) throw new Error("Backend news provincial failed");
+    const data = await res.json();
+    if (data && data.length > 0) saveToCache(cacheKey, data);
+    return data;
+  } catch (error) {
+    return [
+      {
+        id: Date.now() + 500,
+        title: "Turismo Cultural en el Corazón de Corrientes",
+        excerpt: "Crece la llegada de viajeros interesados en ecoturismo e identidad musical correntina.",
+        fullContent: "La provincia de Corrientes consolida su posicionamiento nacional e internacional como destino predilecto para el turismo de naturaleza en los majestuosos Esteros del Iberá. \n\nAsimismo, las peñas y festivales de chamamé a lo largo y ancho del territorio registran récord de convocatoria, impulsando las economías locales y el empleo cultural regional.",
+        tag: "TURISMO",
+        date: "Hoy",
+        image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1470&auto=format&fit=crop"
+      }
+    ];
+  }
+};
+
 export const generateNationalNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
   const cacheKey = "content_national_news";
   if (!forceRefresh) {
@@ -97,7 +124,7 @@ export const generateNationalNews = async (forceRefresh: boolean = false): Promi
     if (cached) return cached;
   }
   try {
-    const res = await fetch('/api/news/national');
+    const res = await fetch(`/api/news/national?force=${forceRefresh}`);
     if (!res.ok) throw new Error("Backend news national failed");
     const data = await res.json();
     if (data && data.length > 0) saveToCache(cacheKey, data);
@@ -166,31 +193,78 @@ export const getMarqueeText = async () => {
 };
 
 export interface Reflection {
+  title: string;
+  tag: string;
   quote: string;
   author: string;
   message: string;
   imageUrl: string;
 }
 
-export const generateReflection = async (forceRefresh: boolean = false): Promise<Reflection> => {
-  const cacheKey = "content_reflection";
+export const generateReflectionsList = async (forceRefresh: boolean = false): Promise<Reflection[]> => {
+  const cacheKey = "content_reflections_list";
   if (!forceRefresh) {
-    const cached = getFromCache<Reflection>(cacheKey, REFLECTION_TTL_MS);
+    const cached = getFromCache<Reflection[]>(cacheKey, REFLECTION_TTL_MS);
     if (cached) return cached;
   }
   try {
-    const res = await fetch(`/api/reflections?force=${forceRefresh}&random=${forceRefresh}`);
-    if (!res.ok) throw new Error("Backend reflection failed");
-    const info = await res.json();
-    if (info.quote) saveToCache(cacheKey, info);
-    return info;
+    const res = await fetch(`/api/reflections?force=${forceRefresh}`);
+    if (!res.ok) throw new Error("Backend reflections failed");
+    const data = await res.json();
+    if (data && data.length > 0) saveToCache(cacheKey, data);
+    return data;
   } catch (error) {
-    return {
-      quote: "El Señor es mi pastor, nada me faltará.",
-      author: "Salmo 23",
-      message: "En los momentos de mayor incertidumbre, recuerda que no caminas solo. Hay una paz que sobrepasa todo entendimiento esperando por ti hoy. Confía en el proceso y en que cada paso que das está guiado por una mano amorosa que nunca te suelta.",
-      imageUrl: "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?q=80&w=1470&auto=format&fit=crop"
-    };
+    const fallbackTitles = [
+      "La fe que mueve montañas",
+      "El poder de la oración persistente",
+      "El amor incondicional del Padre",
+      "Nueva misericordia cada mañana",
+      "Más que vencedores en Cristo",
+      "Creados con un propósito eterno",
+      "La Palabra que ilumina el camino",
+      "La gracia suficiente de Cristo",
+      "Caminando por fe, no por vista",
+      "Paz en medio de la tormenta"
+    ];
+    const fallbackTags = [
+      "FE", "ORACIÓN", "AMOR DE DIOS", "ESPERANZA", "VICTORIA", "PROPÓSITO", "PALABRA DE DIOS", "GRACIA", "FE", "ESPERANZA"
+    ];
+    const fallbackQuotes = [
+      "De cierto os digo, que si tuviereis fe como un grano de mostaza, diréis a este monte: Pásate de aquí allá, y se pasará; y nada os será imposible.",
+      "Clama a mí, y yo te responderé, y te enseñaré cosas grandes y ocultas que tú no conoces.",
+      "Con amor eterno te he amado; por tanto, te prolongué mi misericordia.",
+      "Por la misericordia de Jehová no hemos sido consumidos, porque nunca decayeron sus misericordias. Nuevas son cada mañana; grande es tu fidelidad.",
+      "Antes, en todas estas cosas somos más que vencedores por medio de aquel que nos amó.",
+      "Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz, y no de mal, para daros el fin que esperáis.",
+      "Lámpara es a mis pies tu palabra, y lumbrera a mi camino.",
+      "Y me ha dicho: Bástate mi gracia; porque mi poder se perfecciona en la debilidad.",
+      "Porque por fe andamos, no por vista.",
+      "La paz os dejo, mi paz os doy; yo no os la doy como el mundo la da. No se turbe vuestro corazón, ni tenga miedo."
+    ];
+    const fallbackAuthors = [
+      "Mateo 17:20", "Jeremías 33:3", "Jeremías 31:3", "Lamentaciones 3:22-23", "Romanos 8:37", "Jeremías 29:11", "Salmo 119:105", "2 Corintios 12:9", "2 Corintios 5:7", "Juan 14:27"
+    ];
+
+    const fallbackArray = Array.from({ length: 10 }).map((_, index) => ({
+      title: fallbackTitles[index],
+      tag: fallbackTags[index],
+      quote: fallbackQuotes[index],
+      author: fallbackAuthors[index],
+      message: `Esta es una hermosa reflexión espiritual evangélica y bíblica basada en el versículo de ${fallbackAuthors[index]}. Nos recuerda el inmenso amor de Dios y la obra salvadora de Cristo Jesús en nuestras vidas cotidianas. \n\nNo importa cuán difícil parezca el camino que tienes que transitar en este día. Recuerda que la palabra de Dios es viva y eficaz y que su gracia sobreabunda en cada momento. Encomienda tu camino al Señor, confía en Él y Él hará. \n\nHoy meditamos en cómo podemos vivir de manera agradable a Dios, fortaleciendo nuestra fe mediante la oración persistente y constante.`,
+      imageUrl: `https://images.unsplash.com/photo-${[
+        "1490730141103-6cac27aaab94",
+        "1506744038136-46273834b3fb",
+        "1518133910546-b6c2fb7d79e3",
+        "1470071131384-001b85755b36",
+        "1520607162513-77705c0f0d4a",
+        "1472214103451-9374bd1c798e",
+        "1507525428034-b723cf961d3e",
+        "1490730141103-6cac27aaab94",
+        "1506744038136-46273834b3fb",
+        "1518133910546-b6c2fb7d79e3"
+      ][index]}?q=80&w=1470&auto=format&fit=crop`
+    }));
+    return fallbackArray;
   }
 };
 

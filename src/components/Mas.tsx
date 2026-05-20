@@ -1,6 +1,6 @@
-import React from 'react';
-import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink, Sparkles, Music } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink, Sparkles, Music, Tv } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../store/useStore';
 
 const socialLinks = [
@@ -12,6 +12,18 @@ const socialLinks = [
 
 export const Mas = () => {
   const { setActiveTab, isInstallable, installPrompt, setInstallPrompt } = useStore();
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const triggerAlert = (name: string) => {
+    setToastMessage(name);
+    setShowToast(true);
+    // Auto collapse after 3.2 seconds
+    const timer = setTimeout(() => {
+      setShowToast(false);
+    }, 3200);
+    return () => clearTimeout(timer);
+  };
 
   const handleInstallClick = async () => {
     if (!installPrompt) return;
@@ -56,36 +68,62 @@ export const Mas = () => {
             </div>
           </motion.div>
         )}
-        {/* Reflection Section */}
+        {/* Reflection & Multimedia Section */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic underline decoration-[#ff007f] decoration-4 underline-offset-8">Inspiración</h2>
-            <p className="text-sm text-white/40">Detente un momento y alimenta tu espíritu.</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight uppercase italic underline decoration-[#ff007f] decoration-4 underline-offset-8">Inspiración y Multimedia</h2>
+            <p className="text-sm text-white/40">Detente un momento para alimentar tu espíritu y disfrutar contenido audiovisual.</p>
           </div>
           
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveTab('reflexion')}
-            className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-8 text-left transition-all hover:border-[#00f2ff]/30 shadow-2xl"
-          >
-            <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity">
-              <Sparkles size={60} className="text-[#00f2ff]" />
-            </div>
-            
-            <div className="relative z-10 space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#00f2ff]/10 border border-[#00f2ff]/20 flex items-center justify-center">
-                <Sparkles size={24} className="text-[#00f2ff]" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('reflexion')}
+              className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-8 text-left transition-all hover:border-[#00f2ff]/30 shadow-2xl"
+            >
+              <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity">
+                <Sparkles size={60} className="text-[#00f2ff]" />
               </div>
-              <div className="space-y-1">
-                <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter">
-                  Reflexión <br />
-                  <span className="text-[#00f2ff]">Espiritual</span>
-                </h3>
-                <p className="text-xs text-white/50 font-medium">Sabiduría práctica para tu vida diaria.</p>
+              
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#00f2ff]/10 border border-[#00f2ff]/20 flex items-center justify-center">
+                  <Sparkles size={24} className="text-[#00f2ff]" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter">
+                    Reflexión <br />
+                    <span className="text-[#00f2ff]">Espiritual</span>
+                  </h3>
+                  <p className="text-xs text-white/50 font-medium">Sabiduría práctica para tu vida diaria.</p>
+                </div>
               </div>
-            </div>
-          </motion.button>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveTab('video')}
+              className="w-full relative overflow-hidden group rounded-[2.5rem] border border-white/10 bg-zinc-950/50 p-8 text-left transition-all hover:border-[#ff007f]/30 shadow-2xl"
+            >
+              <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity">
+                <Tv size={60} className="text-[#ff007f]" />
+              </div>
+              
+              <div className="relative z-10 space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#ff007f]/10 border border-[#ff007f]/20 flex items-center justify-center">
+                  <Tv size={24} className="text-[#ff007f]" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-black text-white italic uppercase leading-none tracking-tighter">
+                    Videos <br />
+                    <span className="text-[#ff007f]">En Vivo</span>
+                  </h3>
+                  <p className="text-xs text-white/50 font-medium">Transmisiones, festivales y fe.</p>
+                </div>
+              </div>
+            </motion.button>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -142,20 +180,29 @@ export const Mas = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {socialLinks.map((link) => (
-            <motion.a
-              key={link.label}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`flex flex-col items-center justify-center p-6 rounded-3xl ${link.color} transition-all border border-white/5 shadow-xl`}
-            >
-              <link.icon size={28} className="mb-2 text-white" />
-              <span className="text-xs font-bold text-white uppercase tracking-wider">{link.label}</span>
-            </motion.a>
-          ))}
+          {socialLinks.map((link) => {
+            const isUnderConstruction = ['Instagram', 'Facebook', 'Sitio Web'].includes(link.label);
+            
+            return (
+              <motion.button
+                key={link.label}
+                onClick={() => {
+                  if (isUnderConstruction) {
+                    triggerAlert(link.label);
+                  } else {
+                    // Open WhatsApp in a new tab
+                    window.open('https://wa.me/5491159204990', '_blank');
+                  }
+                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`flex flex-col items-center justify-center p-6 rounded-3xl ${link.color} transition-all border border-white/5 shadow-xl cursor-pointer w-full text-center`}
+              >
+                <link.icon size={28} className="mb-2 text-white" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">{link.label}</span>
+              </motion.button>
+            );
+          })}
         </div>
 
         <div className="p-6 rounded-3xl bg-white/5 border border-white/10 space-y-4 backdrop-blur-md">
@@ -166,10 +213,37 @@ export const Mas = () => {
           <p className="text-xs text-white/40 leading-relaxed">
             Si tienes problemas con la señal o quieres publicitar en nuestra emisora, contáctanos.
           </p>
-          <button className="w-full py-3 bg-[#ff007f]/10 border border-[#ff007f]/20 hover:bg-[#ff007f]/20 rounded-xl text-xs font-bold text-[#ff007f] transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
+          <button 
+            onClick={() => triggerAlert('Email')}
+            className="w-full py-3 bg-[#ff007f]/10 border border-[#ff007f]/20 hover:bg-[#ff007f]/20 rounded-xl text-xs font-bold text-[#ff007f] transition-all flex items-center justify-center gap-2 uppercase tracking-widest cursor-pointer"
+          >
             ENVIAR EMAIL <ExternalLink size={14} />
           </button>
         </div>
+
+        {/* Floating Under Construction Notification Toast */}
+        <AnimatePresence>
+          {showToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.95 }}
+              className="fixed bottom-24 left-6 right-6 z-[999] bg-zinc-950/95 border border-yellow-500/30 shadow-[0_4px_30px_rgba(234,179,8,0.2)] rounded-3xl p-5 flex items-center gap-4 backdrop-blur-xl"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 shrink-0">
+                <Sparkles size={20} className="animate-pulse" />
+              </div>
+              <div className="space-y-0.5 text-left">
+                <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                  Sitio en Construcción
+                </h4>
+                <p className="text-[10px] text-white/50 uppercase tracking-widest font-semibold leading-normal">
+                  La opción de <span className="text-[#ff007f] font-black">{toastMessage}</span> está siendo preparada y estará disponible pronto.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="text-center py-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full mb-4">

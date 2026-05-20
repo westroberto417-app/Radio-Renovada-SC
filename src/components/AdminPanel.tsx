@@ -26,7 +26,6 @@ export const AdminPanel = () => {
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [transmissionStatus, setTransmissionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [showConfig, setShowConfig] = useState(false);
-  const [requests, setRequests] = useState<SongRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   
   const [rbConfig, setRbConfig] = useState<RadioBossConfig>(() => {
@@ -38,7 +37,7 @@ export const AdminPanel = () => {
     }
   });
 
-  const { setIsDucked } = useStore();
+  const { requests, fetchRequests, deleteRequest, clearAllRequests, setIsDucked } = useStore();
 
   useEffect(() => {
     try {
@@ -50,47 +49,21 @@ export const AdminPanel = () => {
 
   useEffect(() => {
     fetchRequests();
-    const interval = setInterval(fetchRequests, 30000); // Cada 30 seg
+    const interval = setInterval(fetchRequests, 8000); // Cada 8 seg
     return () => {
       window.speechSynthesis.cancel();
       setIsDucked(false);
       clearInterval(interval);
     }
-  }, []);
+  }, [fetchRequests, setIsDucked]);
 
-  const fetchRequests = async () => {
-    try {
-      const res = await fetch('/api/requests');
-      if (res.ok) {
-        const data = await res.json();
-        setRequests(data);
-      }
-    } catch (e) {
-      console.error("Error fetching requests:", e);
-    }
+  const handleDelete = async (id: number) => {
+    await deleteRequest(id);
   };
 
-  const deleteRequest = async (id: number) => {
-    try {
-      const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setRequests(requests.filter(r => r.id !== id));
-      }
-    } catch (e) {
-      console.error("Error deleting request:", e);
-    }
-  };
-
-  const clearAllRequests = async () => {
+  const handleClearAll = async () => {
     if (!confirm("¿Seguro que quieres borrar todos los pedidos?")) return;
-    try {
-      const res = await fetch('/api/requests', { method: 'DELETE' });
-      if (res.ok) {
-        setRequests([]);
-      }
-    } catch (e) {
-      console.error("Error clearing requests:", e);
-    }
+    await clearAllRequests();
   };
 
   const sendRbCommand = async (action: string) => {
@@ -368,7 +341,7 @@ export const AdminPanel = () => {
               </button>
               {requests.length > 0 && (
                 <button 
-                  onClick={clearAllRequests}
+                  onClick={handleClearAll}
                   className="p-2 transition-all bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl"
                   title="Borrar todo"
                 >
@@ -404,7 +377,7 @@ export const AdminPanel = () => {
                     className="p-5 bg-white/5 border border-white/10 rounded-3xl space-y-3 relative group"
                   >
                     <button 
-                      onClick={() => deleteRequest(req.id)}
+                      onClick={() => handleDelete(req.id)}
                       className="absolute top-4 right-4 p-2 bg-white/5 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <Trash2 size={16} />

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Clock, ArrowRight, RefreshCcw, MapPin, Sparkles, Newspaper, Globe, X, Share2, Search, Volume2, Square } from 'lucide-react';
-import { generateLocalNews, generateNationalNews, LocalNews } from '../services/contentService';
+import { Clock, ArrowRight, RefreshCcw, MapPin, Sparkles, Newspaper, Globe, X, Share2, Search, Volume2, Square } from 'lucide-react';
+import { generateLocalNews, generateProvincialNews, generateNationalNews, LocalNews } from '../services/contentService';
 import { cn } from '../lib/utils';
 import { useStore } from '../store/useStore';
 
 export const Noticias = () => {
   const [newsList, setNewsList] = useState<LocalNews[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeType, setActiveType] = useState<'local' | 'national'>('local');
+  const [activeType, setActiveType] = useState<'local' | 'provincial' | 'national'>('local');
   const [selectedNews, setSelectedNews] = useState<LocalNews | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [speakingId, setSpeakingId] = useState<number | null>(null);
@@ -20,7 +20,9 @@ export const Noticias = () => {
     setNewsList([]);
     const generatedNews = activeType === 'local' 
       ? await generateLocalNews(force) 
-      : await generateNationalNews(force);
+      : activeType === 'provincial'
+        ? await generateProvincialNews(force)
+        : await generateNationalNews(force);
     setNewsList(generatedNews);
     setLoading(false);
   };
@@ -47,16 +49,16 @@ export const Noticias = () => {
     
     window.speechSynthesis.cancel();
     
-    const textToRead = `${news.title}. ${news.fullContent}`;
+    // Clean up content from icons or emoji
+    const cleanTitle = news.title.replace(/[🎧📷📻🎵]/g, '');
+    const cleanContent = news.fullContent.replace(/[🎧📷📻🎵]/g, '');
+    const textToRead = `${cleanTitle}. ${cleanContent}`;
+    
     const utterance = new SpeechSynthesisUtterance(textToRead);
     utterance.lang = 'es-AR';
-    utterance.rate = 0.95; // A bit slower for more natural reading
-    utterance.pitch = 0.98; // Slightly lower pitch typically sounds better
+    utterance.rate = 1.0;
     
     const voices = window.speechSynthesis.getVoices();
-    
-    // Attempt to find the best, most natural-sounding Spanish voice available.
-    // Edge/Chrome often have 'Natural' or 'Online' voices that sound vastly better.
     let selectedVoice = voices.find(v => v.lang.includes('es') && (v.name.includes('Natural') || v.name.includes('Online')));
     
     if (!selectedVoice) {
@@ -73,7 +75,7 @@ export const Noticias = () => {
     if (!selectedVoice) {
       selectedVoice = voices.find(v => v.lang.includes('es-AR')) || voices.find(v => v.lang.startsWith('es'));
     }
-
+  
     if (selectedVoice) utterance.voice = selectedVoice;
 
     utterance.onend = () => {
@@ -103,10 +105,9 @@ export const Noticias = () => {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
-        alert('Enlace copiado al portapapeles');
       }
     } catch (err) {
-      console.error('Error al compartir:', err);
+      console.error('Error sharing news item:', err);
     }
   };
 
@@ -121,41 +122,58 @@ export const Noticias = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-12">
         <div className="space-y-4 max-w-2xl">
-          <h2 className="text-4xl font-black text-white leading-tight flex items-center gap-3 italic">
-            {activeType === 'local' ? <MapPin className="text-[#ff007f]" /> : <Globe className="text-[#00f2ff]" />}
-            {activeType === 'local' ? 'Actualidad Regional' : 'Panorama Global'}
+          <h2 className="text-4xl font-black text-white leading-tight flex items-center gap-3 italic flex-wrap">
+            {activeType === 'local' && <MapPin className="text-[#ff007f]" />}
+            {activeType === 'provincial' && <Newspaper className="text-[#00f2ff]" />}
+            {activeType === 'national' && <Globe className="text-emerald-400" />}
+            
+            {activeType === 'local' && 'San Miguel y Zonas Aledañas'}
+            {activeType === 'provincial' && 'Diario de la Provincia'}
+            {activeType === 'national' && 'Noticias Generales del País'}
           </h2>
-          <p className="text-sm font-light text-white/60 leading-relaxed max-w-lg italic border-l-2 border-[#ff007f]/40 pl-4">
-            Información curada para nuestra comunidad. Mantente al día con los sucesos más relevantes de San Miguel y el mundo. 
+          <p className="text-sm font-light text-white/60 leading-relaxed max-w-lg italic border-l-2 border-[#ff007f]/40 pl-4 animate-fade-in">
+            {activeType === 'local' && 'Operativos municipales, cultura, salud rural, agro y vida comunitaria de los vecinos de San Miguel, Caá Catí, Loreto y Santa Rosa.'}
+            {activeType === 'provincial' && 'Todo el acontecer diario de la Provincia de Corrientes, su chamamé, ecoturismo del Iberá y desarrollo de sus municipios.'}
+            {activeType === 'national' && 'Las novedades de actualidad e interés federal más relevantes y trascendentes de toda la República Argentina.'}
             <span className="block mt-2 font-bold text-white/40">Si tienes información importante, compártela en los comentarios para sumarla a nuestras noticias generales.</span>
           </p>
         </div>
         
         <div className="flex flex-col items-end gap-4 w-full md:w-auto">
-          <div className="flex items-center bg-zinc-950/80 p-1.5 rounded-2xl border border-white/5 backdrop-blur-md">
+          <div className="flex items-center bg-zinc-950/80 p-1.5 rounded-2xl border border-white/5 backdrop-blur-md flex-wrap gap-1 md:gap-0">
             <button 
               onClick={() => setActiveType('local')}
               className={cn(
-                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer",
                 activeType === 'local' ? "bg-[#ff007f] text-white shadow-[0_0_15px_rgba(255,0,127,0.3)]" : "text-white/30 hover:text-white/60"
               )}
             >
-              <MapPin size={12} /> Regional
+              <MapPin size={12} /> Locales
             </button>
             <button 
-              onClick={() => setActiveType('national')}
+              onClick={() => setActiveType('provincial')}
               className={cn(
-                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                activeType === 'national' ? "bg-[#00f2ff] text-black shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "text-white/30 hover:text-white/60"
+                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer",
+                activeType === 'provincial' ? "bg-[#00f2ff] text-black shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "text-white/30 hover:text-white/60"
               )}
             >
               <Newspaper size={12} /> Diario
             </button>
-            <div className="w-[1px] h-4 bg-white/10 mx-2" />
+            <button 
+              onClick={() => setActiveType('national')}
+              className={cn(
+                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer",
+                activeType === 'national' ? "bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]" : "text-white/30 hover:text-white/60"
+              )}
+            >
+              <Globe size={12} /> Nacionales
+            </button>
+            <div className="hidden md:block w-[1px] h-4 bg-white/10 mx-2" />
             <button 
               onClick={() => fetchNews(true)}
               disabled={loading}
-              className="p-2.5 text-white/20 hover:text-white transition-colors disabled:opacity-30"
+              className="p-2.5 text-white/20 hover:text-white transition-colors disabled:opacity-30 cursor-pointer"
+              title="Renovar noticias"
             >
               <RefreshCcw size={16} className={cn(loading && "animate-spin")} />
             </button>
@@ -168,7 +186,7 @@ export const Noticias = () => {
               placeholder="Buscar noticias..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-[13px] text-white placeholder-white/30 focus:outline-none focus:border-[#ff007f]/50 transition-all font-light"
+              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 py-2.5 pl-11 pr-4 text-[13px] text-white placeholder-white/30 focus:outline-none focus:border-[#ff007f]/50 transition-all font-light"
             />
           </div>
         </div>
@@ -191,7 +209,7 @@ export const Noticias = () => {
                 className="group relative bg-zinc-950/40 border border-white/5 rounded-[3rem] overflow-hidden hover:border-[#ff007f]/20 transition-all duration-700 hover:shadow-2xl hover:shadow-[#ff007f]/5"
               >
                 <div className="flex flex-col lg:flex-row h-full">
-                  <div className="lg:w-1/3 aspect-[16/9] lg:aspect-auto overflow-hidden relative">
+                  <div className="lg:w-1/3 aspect-[16/9] lg:aspect-auto overflow-hidden relative min-h-[220px]">
                     <img
                       src={item.image}
                       alt={item.title}
@@ -208,7 +226,7 @@ export const Noticias = () => {
                         <Clock size={12} className="text-[#ff007f]" />
                         {item.date}
                         <span className="w-1 h-1 rounded-full bg-white/10" />
-                        {activeType === 'national' ? 'Destacado' : 'Regional'}
+                        {activeType === 'local' ? 'Locales' : activeType === 'provincial' ? 'Provincia' : 'Nacional'}
                       </div>
                       <h3 className="text-2xl md:text-3xl font-black text-white leading-[1.1] group-hover:text-[#ff007f] transition-all duration-500 italic">
                         {item.title}
@@ -218,10 +236,10 @@ export const Noticias = () => {
                       </p>
                     </div>
                     
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
                       <button 
                         onClick={() => setSelectedNews(item)}
-                        className="group/btn flex items-center text-[#ff007f] text-[10px] font-black tracking-[0.3em] gap-3 uppercase py-2"
+                        className="group/btn flex items-center text-[#ff007f] text-[10px] font-black tracking-[0.3em] gap-3 uppercase py-2 cursor-pointer"
                       >
                         Amplificar Noticia <div className="p-2 bg-[#ff007f]/10 rounded-full group-hover/btn:bg-[#ff007f] group-hover/btn:text-white transition-all"><ArrowRight size={14} /></div>
                       </button>
@@ -229,18 +247,23 @@ export const Noticias = () => {
                         <button 
                           onClick={(e) => handleSpeak(item, e)}
                           title={speakingId === item.id ? "Detener lectura" : "Leer noticia completa"}
-                          className="text-[#ff007f] hover:text-white transition-colors cursor-pointer flex items-center gap-1 bg-[#ff007f]/10 px-3 py-1.5 rounded-full"
+                          className={cn(
+                            "transition-all cursor-pointer flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest",
+                            speakingId === item.id 
+                              ? "bg-[#ff007f] text-white border-[#ff007f] animate-pulse" 
+                              : "bg-[#ff007f]/10 hover:bg-[#ff007f]/20 text-[#ff007f] border-transparent"
+                          )}
                         >
-                          {speakingId === item.id ? <Square size={16} fill="currentColor" /> : <Volume2 size={16} />}
-                          <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
-                            {speakingId === item.id ? 'Detener' : 'Voz Natural'}
+                          {speakingId === newsList[idx].id ? <Square size={13} fill="currentColor" /> : <Volume2 size={13} />}
+                          <span>
+                            {speakingId === item.id ? 'Detener' : 'Escuchar'}
                           </span>
                         </button>
                         <button 
                           onClick={(e) => handleShare(item, e)}
-                          className="hover:bg-white/5 p-1.5 rounded-full transition-colors flex items-center justify-center"
+                          className="hover:bg-white/5 p-2 rounded-full transition-colors flex items-center justify-center cursor-pointer border border-transparent hover:border-white/10"
                         >
-                          <Share2 size={16} className="text-white/20 hover:text-white transition-colors cursor-pointer" />
+                          <Share2 size={15} className="text-white/20 hover:text-white" />
                         </button>
                       </div>
                     </div>
@@ -251,8 +274,8 @@ export const Noticias = () => {
           ) : (
             searchQuery ? (
               <div className="text-center py-24 space-y-4">
-                <Search className="text-white/20 justify-center w-full mb-6" size={48} />
-                <p className="text-white md:text-xl font-black italic uppercase text-xs max-w-sm mx-auto">
+                <Search className="text-white/20 justify-center w-full mb-6 mx-auto" size={48} />
+                <p className="text-white md:text-xl font-black italic uppercase text-xs max-w-sm mx-auto animate-fade-in">
                   No se encontraron resultados
                 </p>
                 <p className="text-white/30 italic text-sm">
@@ -294,7 +317,7 @@ export const Noticias = () => {
             >
               <button 
                 onClick={() => setSelectedNews(null)}
-                className="absolute top-6 right-6 z-10 p-4 bg-black/50 text-white hover:bg-[#ff007f] transition-all rounded-full backdrop-blur-md"
+                className="absolute top-6 right-6 z-10 p-4 bg-black/50 text-white hover:bg-[#ff007f] transition-all rounded-full backdrop-blur-md cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -314,9 +337,9 @@ export const Noticias = () => {
                 </div>
 
                 <div className="p-10 md:p-16 space-y-10">
-                  <div className="flex items-center gap-6 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                  <div className="flex items-center gap-6 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] flex-wrap">
                     <span className="flex items-center gap-2 italic"><Clock size={14} className="text-[#ff007f]" /> {selectedNews.date}</span>
-                    <span className="flex items-center gap-2 italic"><MapPin size={14} className="text-[#00f2ff]" /> San Miguel Región</span>
+                    <span className="flex items-center gap-2 italic"><MapPin size={14} className="text-[#00f2ff]" /> {activeType === 'local' ? 'San Miguel Región' : activeType === 'provincial' ? 'Corrientes Provincia' : 'Nacional'}</span>
                   </div>
                   
                   <div className="space-y-6 text-lg md:text-xl text-white/90 font-light leading-relaxed italic border-l-4 border-[#ff007f]/20 pl-8">
@@ -327,23 +350,28 @@ export const Noticias = () => {
 
                   <div className="bg-white/5 rounded-3xl p-8 border border-white/5">
                     <p className="text-sm text-white/60 leading-relaxed italic">
-                      "Esta noticia ha sido procesada por nuestra Inteligencia Artificial curadora de contenidos para Radio Corrientes Viva, extrayendo los puntos más relevantes para brindarte una cobertura completa y profunda del suceso."
+                      "Esta noticia ha sido procesada por nuestra Inteligencia Actoral curadora de contenidos para Radio Corrientes Viva, de manera objetiva para todo el país, sintonizada desde Corrientes para todo el territorio nacional."
                     </p>
                   </div>
 
                   <div className="pt-10 border-t border-white/5 flex flex-col md:flex-row gap-4 justify-between items-center">
                     <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] text-center md:text-left">Radio Corrientes Viva • 2026</p>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 w-full md:w-auto">
                       <button 
                         onClick={() => handleSpeak(selectedNews)}
-                        className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 w-full md:w-auto"
+                        className={cn(
+                          "px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 w-full md:w-auto cursor-pointer border",
+                          speakingId === selectedNews.id 
+                            ? "bg-[#ff007f] border-[#ff007f] text-white" 
+                            : "bg-white/10 hover:bg-white/20 border-transparent text-white"
+                        )}
                       >
                         {speakingId === selectedNews.id ? <Square fill="currentColor" size={14} /> : <Volume2 size={14} />}
                         {speakingId === selectedNews.id ? 'Detener Voz' : 'Escuchar Noticia'}
                       </button>
                       <button 
                         onClick={() => handleShare(selectedNews)}
-                        className="bg-[#ff007f] text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,0,127,0.3)] flex items-center justify-center gap-2 w-full md:w-auto"
+                        className="bg-[#ff007f] text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,0,127,0.3)] flex items-center justify-center gap-2 w-full md:w-auto cursor-pointer"
                       >
                         <Share2 size={14} /> Compartir Noticia
                       </button>
@@ -358,5 +386,3 @@ export const Noticias = () => {
     </div>
   );
 };
-
-

@@ -1,58 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Music, RefreshCcw, Trash2, History, User } from 'lucide-react';
-
-interface SongRequest {
-  id: number;
-  name: string;
-  song: string;
-  artist: string;
-  message: string;
-  timestamp: string;
-}
+import { Music, RefreshCcw, Trash2, History } from 'lucide-react';
+import { useStore } from '../store/useStore';
 
 export const PedidosLista = () => {
-  const [requests, setRequests] = useState<SongRequest[]>([]);
+  const { requests, fetchRequests, deleteRequest, clearAllRequests } = useStore();
 
   useEffect(() => {
     fetchRequests();
-    const interval = setInterval(fetchRequests, 10000); // Cada 10 seg
+    const interval = setInterval(fetchRequests, 8000); // Cada 8 seg
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchRequests]);
 
-  const fetchRequests = async () => {
-    try {
-      const res = await fetch('/api/requests');
-      if (res.ok) {
-        const data = await res.json();
-        setRequests(data);
-      }
-    } catch (e) {
-      console.error("Error fetching requests:", e);
-    }
+  const handleDelete = async (id: number) => {
+    await deleteRequest(id);
   };
 
-  const deleteRequest = async (id: number) => {
-    try {
-      const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setRequests(requests.filter(r => r.id !== id));
-      }
-    } catch (e) {
-      console.error("Error deleting request:", e);
-    }
-  };
-
-  const clearAllRequests = async () => {
+  const handleClearAll = async () => {
     if (!confirm("¿Seguro que quieres borrar todos los pedidos?")) return;
-    try {
-      const res = await fetch('/api/requests', { method: 'DELETE' });
-      if (res.ok) {
-        setRequests([]);
-      }
-    } catch (e) {
-      console.error("Error clearing requests:", e);
-    }
+    await clearAllRequests();
   };
 
   return (
@@ -80,7 +46,7 @@ export const PedidosLista = () => {
             </button>
             {requests.length > 0 && (
               <button 
-                onClick={clearAllRequests}
+                onClick={handleClearAll}
                 className="p-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-xl transition-all"
                 title="Borrar todo"
               >
@@ -116,7 +82,7 @@ export const PedidosLista = () => {
                   className="p-6 bg-zinc-950/50 border border-white/10 rounded-[2.5rem] space-y-4 relative group shadow-xl"
                 >
                   <button 
-                    onClick={() => deleteRequest(req.id)}
+                    onClick={() => handleDelete(req.id)}
                     className="absolute top-6 right-6 p-2 bg-white/5 text-white/20 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                   >
                     <Trash2 size={18} />

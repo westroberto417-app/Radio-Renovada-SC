@@ -14,6 +14,7 @@ import { Sumate } from './components/Sumate';
 import { Reflexion } from './components/Reflexion';
 import { Programacion } from './components/Programacion';
 import { Donaciones } from './components/Donaciones';
+import { Video } from './components/Video';
 import Aplicacion from './components/Aplicacion';
 import { motion, AnimatePresence } from 'motion/react';
 import { ScrollToTop } from './components/ScrollToTop';
@@ -68,6 +69,7 @@ const App = () => {
       case 'reflexion': return <Reflexion />;
       case 'programacion': return <Programacion />;
       case 'donaciones': return <Donaciones />;
+      case 'video': return <Video />;
       default: return <Inicio />;
     }
   };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Cast, Maximize, Minimize, Users, X, Megaphone, Clock, Sparkles, Calendar, Heart, Radio } from 'lucide-react';
+import { Menu, Cast, Maximize, Minimize, Users, X, Megaphone, Clock, Sparkles, Calendar, Heart, Radio, Video } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { getArgentinaTime } from '../lib/utils';
@@ -34,6 +34,7 @@ export const TopBar = () => {
   const menuItems = [
     { label: 'Programación', icon: Calendar, action: () => { setActiveTab('programacion'); setIsMenuOpen(false); } },
     { label: 'Reflexión', icon: Sparkles, action: () => { setActiveTab('reflexion'); setIsMenuOpen(false); } },
+    { label: 'Videos', icon: Video, action: () => { setActiveTab('video'); setIsMenuOpen(false); } },
     { label: 'Publicidad', icon: Megaphone, action: () => { setActiveTab('aplicacion'); setIsMenuOpen(false); } },
     { label: 'Súmate también', icon: Users, action: () => { setActiveTab('sumate'); setIsMenuOpen(false); } },
     { label: 'Apoyar Nuestra Radio', icon: Heart, action: () => { setActiveTab('donaciones'); setIsMenuOpen(false); } }
