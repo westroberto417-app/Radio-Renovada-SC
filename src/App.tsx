@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ScrollToTop } from './components/ScrollToTop';
 
 const App = () => {
-  const { activeTab, setRequestCount, setInstallPrompt } = useStore();
+  const { activeTab, setRequestCount, setInstallPrompt, setIsPlaying } = useStore();
   const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
@@ -81,7 +81,13 @@ const App = () => {
       {/* Gated Welcome / Splash Screen or Main App Content */}
       <AnimatePresence mode="wait">
         {showWelcome ? (
-          <WelcomeScreen key="welcome" onDismiss={() => setShowWelcome(false)} />
+          <WelcomeScreen 
+            key="welcome" 
+            onDismiss={() => {
+              setShowWelcome(false);
+              setIsPlaying(true);
+            }} 
+          />
         ) : (
           <motion.div
             key="app-content"
