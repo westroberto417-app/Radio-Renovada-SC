@@ -51,86 +51,55 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onDismiss }) => {
   return (
     <motion.div 
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.5 } }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-4 overflow-hidden select-none cursor-pointer"
+      exit={{ opacity: 0, transition: { duration: 0.6, ease: 'easeInOut' } }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#07070a] overflow-hidden select-none cursor-pointer"
     >
-      {/* Dynamic blurred background glow representing the presentation image */}
+      {/* Dynamic blurred background glow representing the presentation image to fill any screen container padding voids */}
       <div 
-        className="absolute inset-0 bg-cover bg-center blur-[50px] opacity-20 scale-110 pointer-events-none transition-all duration-500"
-        style={{ backgroundImage: `url(${imageSrc})` }}
+        className="absolute inset-0 bg-cover bg-center blur-[50px] opacity-25 scale-110 pointer-events-none transition-all duration-500"
+        style={{ backgroundImage: `url('${imageSrc}')` }}
       />
       
       {/* Ambient pink/blue radial spotlights */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#ff007f]/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+      <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-[#ff007f]/10 rounded-full blur-[150px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[150px] pointer-events-none animate-pulse" />
 
-      {/* Main Container */}
-      <div className="relative z-10 flex flex-col items-center max-w-lg w-full h-full justify-between py-4 max-h-[96vh]">
-        
-        {/* Top subtle greeting */}
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.1 }}
-          className="text-center"
+      {/* Main Fullscreen Image Container */}
+      <div className="relative z-10 w-full h-full flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="w-full h-full flex items-center justify-center"
         >
-          <span className="text-[10px] uppercase tracking-[0.3em] font-black text-white/50">
-            Radio Corrientes Viva
-          </span>
+          <img 
+            src={imageSrc} 
+            alt="Bienvenido a Radio Corrientes Viva"
+            onError={handleImageError}
+            className="w-full h-full max-h-screen object-contain pointer-events-none z-20"
+            referrerPolicy="no-referrer"
+          />
         </motion.div>
+      </div>
 
-        {/* Poster Image Content - Ultra responsive layout */}
-        <div className="my-auto w-full flex items-center justify-center p-2 max-h-[75vh]">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1,
-              y: [0, -6, 0]
-            }}
-            transition={{
-              opacity: { duration: 0.8, ease: "easeOut" },
-              scale: { duration: 0.8, ease: "easeOut" },
-              y: {
-                repeat: Infinity,
-                duration: 5,
-                ease: "easeInOut"
-              }
-            }}
-            className="relative rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(255,0,127,0.35)] border border-white/10 bg-black/40 backdrop-blur-md flex items-center justify-center p-1 w-full max-w-[400px]"
-          >
-            {/* Subtle inside shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/5 pointer-events-none z-30" />
-            
-            <img 
-              src={imageSrc} 
-              alt="Bienvenido a Radio Corrientes Viva"
-              onError={handleImageError}
-              className="w-full h-auto max-h-[70vh] object-contain rounded-2xl pointer-events-none z-20 transition-all duration-300"
-              referrerPolicy="no-referrer"
-            />
-          </motion.div>
-        </div>
-
-        {/* Dynamic bottom action indicator */}
+      {/* Dynamic bottom action indicator overlay - ultra-low positioned, subtle and tiny to protect poster information */}
+      <div className="absolute bottom-1.5 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ 
-            initial: { duration: 0.8 },
-            opacity: {
-              repeat: Infinity,
-              duration: 2.2,
-              ease: "easeInOut"
-            }
+          animate={{ 
+            opacity: [0.5, 0.9, 0.5],
           }}
-          className="text-center mt-3 px-5 py-2 bg-gradient-to-r from-transparent via-[#ff007f]/10 to-transparent rounded-full border border-white/[0.03]"
+          transition={{ 
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="flex items-center gap-1 bg-black/40 px-2.5 py-0.5 rounded-full backdrop-blur-sm"
         >
-          <span className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] text-white drop-shadow-[0_0_10px_rgba(255,0,127,0.6)]">
-            Toca la pantalla o presiona una tecla para continuar
+          <span className="w-1 h-1 rounded-full bg-[#ff007f] opacity-80" />
+          <span className="text-[8px] sm:text-[9px] font-medium uppercase tracking-[0.16em] text-white/60">
+            Toca en cualquier lugar para ingresar
           </span>
         </motion.div>
-
       </div>
     </motion.div>
   );
