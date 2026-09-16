@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Menu, Cast, Maximize, Minimize, Users, X, Megaphone, Clock, Sparkles, Calendar, Heart, Radio, Video } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { getArgentinaTime } from '../lib/utils';
+import { CastModal } from './CastModal';
 
-export const TopBar = () => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState(getArgentinaTime());
-  const { setActiveTab } = useStore();
+// Isolated Clock component to prevent 1-second intervals from re-rendering the entire TopBar
+const ClockDisplay = memo(() => {
+  const [currentTime, setCurrentTime] = useState(getArgentinaTime);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -16,6 +15,27 @@ export const TopBar = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  return (
+    <div className="hidden md:flex flex-col items-end mr-4">
+      <div className="flex items-center gap-2 text-white/30 mb-1">
+        <Clock size={12} className="text-[#00f2ff]" />
+        <span className="text-[8px] font-black uppercase tracking-[0.2em]">San Miguel</span>
+      </div>
+      <span className="text-2xl font-black text-white italic leading-none tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(0,242,255,0.4)]">
+        {currentTime}
+      </span>
+    </div>
+  );
+});
+
+ClockDisplay.displayName = 'ClockDisplay';
+
+export const TopBar = memo(() => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCastModalOpen, setIsCastModalOpen] = useState(false);
+  const setActiveTab = useStore((state) => state.setActiveTab);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -33,6 +53,7 @@ export const TopBar = () => {
 
   const menuItems = [
     { label: 'Programación', icon: Calendar, action: () => { setActiveTab('programacion'); setIsMenuOpen(false); } },
+    { label: 'Transmitir / Smart TV', icon: Cast, action: () => { setIsMenuOpen(false); setIsCastModalOpen(true); } },
     { label: 'Reflexión', icon: Sparkles, action: () => { setActiveTab('reflexion'); setIsMenuOpen(false); } },
     { label: 'Videos', icon: Video, action: () => { setActiveTab('video'); setIsMenuOpen(false); } },
     { label: 'Publicidad', icon: Megaphone, action: () => { setActiveTab('aplicacion'); setIsMenuOpen(false); } },
@@ -65,47 +86,34 @@ export const TopBar = () => {
         </div>
         
         <div className="flex-1 flex items-center justify-end gap-6">
-          <div className="hidden md:flex flex-col items-end mr-4">
-            <div className="flex items-center gap-2 text-white/30 mb-1">
-              <Clock size={12} className="text-[#00f2ff]" />
-              <span className="text-[8px] font-black uppercase tracking-[0.2em]">San Miguel</span>
-            </div>
-            <span className="text-2xl font-black text-white italic leading-none tracking-tighter tabular-nums drop-shadow-[0_0_15px_rgba(0,242,255,0.4)]">
-              {currentTime}
-            </span>
-          </div>
+          <ClockDisplay />
 
           <div className="flex items-center gap-2">
             <button 
               onClick={toggleFullscreen}
-              className="p-2.5 text-white/80 hover:text-white transition-all hover:bg-white/5 rounded-xl border border-transparent hover:border-white/10"
+              className="p-2.5 text-white/80 hover:text-white transition-all hover:bg-white/5 rounded-xl border border-transparent hover:border-white/10 cursor-pointer"
               title="Pantalla Completa"
             >
               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </button>
             <button 
-              onClick={() => {
-                const audio = document.querySelector('audio');
-                if (audio && 'remote' in audio) {
-                  (audio as any).remote.prompt().catch((err: any) => {
-                    if (err.name === 'NotFoundError' || err.message === 'The prompt was dismissed.' || err.name === 'NotAllowedError') {
-                      return; // Ignorar cuando el usuario cancela
-                    }
-                    console.error("Cast error:", err);
-                    alert("No se pudo iniciar la transmisión.");
-                  });
-                } else {
-                  alert("La transmisión (Cast) no está disponible en este navegador o dispositivo. Por favor intenta usando Chrome en Android o en Escritorio.");
-                }
-              }}
-              className="p-2.5 text-white/80 hover:text-white transition-all hover:bg-white/5 rounded-xl border border-transparent hover:border-white/10"
-              title="Transmitir a Smart TV"
+              onClick={() => setIsCastModalOpen(true)}
+              className="p-2.5 text-white/80 hover:text-white transition-all hover:bg-white/5 rounded-xl border border-transparent hover:border-white/10 cursor-pointer hover:text-[#ff007f]"
+              title="Transmitir a Smart TV / Chromecast"
             >
               <Cast size={20} />
             </button>
           </div>
         </div>
       </header>
+
+      <AnimatePresence>
+        {isCastModalOpen && (
+          <CastModal 
+            onClose={() => setIsCastModalOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isMenuOpen && (
@@ -163,4 +171,6 @@ export const TopBar = () => {
       </AnimatePresence>
     </>
   );
-};
+});
+
+TopBar.displayName = 'TopBar';

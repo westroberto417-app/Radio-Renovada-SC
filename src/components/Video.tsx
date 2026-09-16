@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Tv, Share2, Search, X, Volume2, HelpCircle, Heart, Clock, ThumbsUp, Sparkles, Filter } from 'lucide-react';
+import { Play, Tv, Share2, Search, X, Volume2, HelpCircle, Heart, Clock, ThumbsUp, Sparkles, Filter, Globe, ExternalLink, CloudSun, Compass, Map } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../lib/utils';
 
@@ -16,6 +16,14 @@ interface VideoRecord {
   thumbnail: string;
 }
 
+interface InterestLink {
+  title: string;
+  description: string;
+  url: string;
+  category: string;
+  iconType: 'ibera' | 'muni' | 'turismo' | 'clima';
+}
+
 const CATEGORIES = [
   { id: 'todos', label: 'Todos' },
   { id: 'vivo', label: 'En Vivo' },
@@ -25,7 +33,60 @@ const CATEGORIES = [
   { id: 'entrevistas', label: 'Entrevistas' },
 ];
 
+const INTEREST_LINKS: InterestLink[] = [
+  {
+    title: "Portal de Acceso San Antonio (Esteros del Iberá)",
+    description: "Acceso ecoturístico principal directo desde San Miguel, Corrientes. Información para excursiones, senderos y guías locales.",
+    url: "https://turismo.corrientes.gob.ar/experiencia/esteros-del-ibera-portal-san-antonio/",
+    category: "TURISMO LOCAL",
+    iconType: 'ibera'
+  },
+  {
+    title: "Gobierno Provincial de Corrientes",
+    description: "Boletín de novedades oficiales, cultura correntina, gestiones comunitarias y asambleas institucionales.",
+    url: "https://www.corrientes.gob.ar",
+    category: "INFORMACIÓN PÚBLICA",
+    iconType: 'muni'
+  },
+  {
+    title: "Ministerio de Turismo de Corrientes",
+    description: "Guía completa de ecoturismo correntino, calendarios de pesca, festividades tradicionales y carnavales zonales.",
+    url: "https://turismo.corrientes.gob.ar",
+    category: "CULTURA Y EVENTOS",
+    iconType: 'turismo'
+  },
+  {
+    title: "Clima Rural y Agrometeorología (SMN)",
+    description: "Pronóstico inmediato por horas, alertas tempranas y humedad del suelo de San Miguel para productores rurales.",
+    url: "https://www.smn.gob.ar/pronostico",
+    category: "HERRAMIENTAS DEL AGRO",
+    iconType: 'clima'
+  }
+];
+
 const VIDEO_LIST: VideoRecord[] = [
+  {
+    id: 'vid-zonal-1',
+    title: 'Guía de Viaje Portal San Antonio - San Miguel, Corrientes',
+    description: 'Impresionante recorrido por el portal de acceso local hacia los Esteros del Iberá, mostrando la flora, fauna salvaje y canotaje típico de la zona.',
+    category: 'festivales',
+    duration: '12:45',
+    views: '840 vistas',
+    date: 'Hace 1 día',
+    embedUrl: 'https://www.youtube.com/embed/8r9mOf_5-xI',
+    thumbnail: 'https://images.unsplash.com/photo-1470071131384-001b85755b36?q=80&w=1470&auto=format&fit=crop',
+  },
+  {
+    id: 'vid-zonal-2',
+    title: 'Acordeón y Tradición Chamamecera - Lo mejor de Corrientes',
+    description: 'Sesión acústica tradicional grabada en vivo en los estudios de Radio Corrientes Viva repasando los grandes clásicos del chamamé correntino.',
+    category: 'musica',
+    duration: '14:20',
+    views: '620 vistas',
+    date: 'Hace 3 días',
+    embedUrl: 'https://www.youtube.com/embed/BvW4-tU7Qxs',
+    thumbnail: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?q=80&w=1470&auto=format&fit=crop',
+  },
   {
     id: 'vid-1',
     title: 'Transmisión Especial En Vivo - Radio Corrientes Viva',
@@ -176,6 +237,46 @@ export const Video = () => {
           <p className="text-white/40 text-[11px] font-bold uppercase tracking-wider max-w-sm mx-auto">
             Disfrutá de transmisiones especiales en vivo, chamamé tradicional, oraciones y la mejor actualidad correntina.
           </p>
+        </div>
+
+        {/* Vínculos de Interés Zonal y Nacional */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+            <span className="text-[10px] font-black uppercase text-[#ff007f] tracking-widest text-glow-pink">Vínculos de Interés Zonal y Nacional</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {INTEREST_LINKS.map((link, idx) => {
+              let Icon = Globe;
+              if (link.iconType === 'ibera') Icon = Compass;
+              else if (link.iconType === 'muni') Icon = Map;
+              else if (link.iconType === 'turismo') Icon = Globe;
+              else if (link.iconType === 'clima') Icon = CloudSun;
+
+              return (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative flex gap-4 p-4 rounded-3xl border border-white/5 bg-zinc-950/40 hover:bg-zinc-950/80 hover:border-[#ff007f]/30 transition-all duration-300"
+                >
+                  <div className="p-3 rounded-xl bg-white/5 text-[#00f2ff] group-hover:text-[#ff007f] group-hover:bg-[#ff007f]/15 transition-colors shrink-0 flex items-center justify-center h-10 w-10 self-center">
+                    <Icon size={16} />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[8px] font-extrabold text-[#00f2ff] tracking-widest uppercase">{link.category}</span>
+                    <h4 className="text-xs font-bold text-white group-hover:text-[#ff007f] transition-colors flex items-center gap-1.5">
+                      {link.title}
+                      <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </h4>
+                    <p className="text-[10px] text-white/40 leading-relaxed group-hover:text-white/60 transition-colors line-clamp-2">
+                      {link.description}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
         </div>
 
         {/* Featured Video Card */}

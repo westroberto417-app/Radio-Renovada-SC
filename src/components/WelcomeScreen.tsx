@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
+import { Radio, Play, Sparkles } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onDismiss: () => void;
@@ -8,6 +9,7 @@ interface WelcomeScreenProps {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onDismiss }) => {
   const [imageSrc, setImageSrc] = useState('/presentacion final.jpeg');
   const [attemptIndex, setAttemptIndex] = useState(0);
+  const [canDismiss, setCanDismiss] = useState(false);
 
   const fallbackImages = [
     '/presentacion final.jpeg',
@@ -26,81 +28,102 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onDismiss }) => {
       setAttemptIndex(nextIndex);
       setImageSrc(fallbackImages[nextIndex]);
     } else {
-      // If none of the presentacion_final variations exist, fall back to /logo.png as safety
       setImageSrc('/logo.png');
     }
   };
 
+  // Prevent instant accidental dismiss on initial page load / mobile gesture
   useEffect(() => {
-    const handleEvents = () => {
-      onDismiss();
-    };
+    const timer = setTimeout(() => {
+      setCanDismiss(true);
+    }, 900); // Guard delay
 
-    // Listen for any keydown, click, or touchstart
-    window.addEventListener('keydown', handleEvents);
-    window.addEventListener('click', handleEvents);
-    window.addEventListener('touchstart', handleEvents);
+    return () => clearTimeout(timer);
+  }, []);
 
-    return () => {
-      window.removeEventListener('keydown', handleEvents);
-      window.removeEventListener('click', handleEvents);
-      window.removeEventListener('touchstart', handleEvents);
-    };
-  }, [onDismiss]);
+  const handleUserDismiss = () => {
+    if (!canDismiss) return;
+    onDismiss();
+  };
 
   return (
     <motion.div 
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.6, ease: 'easeInOut' } }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#07070a] overflow-hidden select-none cursor-pointer"
+      exit={{ opacity: 0, scale: 1.02, transition: { duration: 0.5, ease: 'easeInOut' } }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#07070a] overflow-hidden select-none p-4 sm:p-6"
+      onClick={handleUserDismiss}
     >
-      {/* Dynamic blurred background glow representing the presentation image to fill any screen container padding voids */}
+      {/* Dynamic blurred background glow */}
       <div 
-        className="absolute inset-0 bg-cover bg-center blur-[50px] opacity-25 scale-110 pointer-events-none transition-all duration-500"
+        className="absolute inset-0 bg-cover bg-center blur-[60px] opacity-30 scale-110 pointer-events-none transition-all duration-700"
         style={{ backgroundImage: `url('${imageSrc}')` }}
       />
       
-      {/* Ambient pink/blue radial spotlights */}
-      <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-[#ff007f]/10 rounded-full blur-[150px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[150px] pointer-events-none animate-pulse" />
+      {/* Ambient spotlights */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#ff007f]/15 rounded-full blur-[140px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#00f2ff]/15 rounded-full blur-[140px] pointer-events-none animate-pulse" />
 
-      {/* Main Fullscreen Image Container */}
-      <div className="relative z-10 w-full h-full flex items-center justify-center">
+      {/* Top Header Badge */}
+      <div className="relative z-20 pt-2 flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="inline-flex items-center gap-2 bg-black/60 border border-white/10 backdrop-blur-md px-4 py-1.5 rounded-full shadow-lg"
+        >
+          <Radio size={14} className="text-[#ff007f] animate-pulse" />
+          <span className="text-[10px] font-black tracking-[0.2em] text-white uppercase">
+            Radio Corrientes Viva
+          </span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] animate-ping" />
+        </motion.div>
+      </div>
+
+      {/* Main Fullscreen Poster / Presentation Container */}
+      <div className="relative z-10 w-full flex-1 flex items-center justify-center my-2 max-h-[78vh]">
         <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
           className="w-full h-full flex items-center justify-center"
         >
           <img 
             src={imageSrc} 
-            alt="Bienvenido a Radio Corrientes Viva"
+            alt="Presentación Radio Corrientes Viva"
             onError={handleImageError}
-            className="w-full h-full max-h-screen object-contain pointer-events-none z-20"
+            className="w-full h-full max-h-[75vh] object-contain rounded-2xl drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-20 pointer-events-none"
             referrerPolicy="no-referrer"
           />
         </motion.div>
       </div>
 
-      {/* Dynamic bottom action indicator overlay - ultra-low positioned, subtle and tiny to protect poster information */}
-      <div className="absolute bottom-1.5 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
-        <motion.div 
-          animate={{ 
-            opacity: [0.5, 0.9, 0.5],
+      {/* Action Button & Instructions */}
+      <div className="relative z-30 pb-2 w-full max-w-sm flex flex-col items-center gap-2.5">
+        <motion.button
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss();
           }}
-          transition={{ 
-            duration: 3,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="flex items-center gap-1 bg-black/40 px-2.5 py-0.5 rounded-full backdrop-blur-sm"
+          className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#ff007f] via-[#d0006f] to-[#00f2ff] text-white font-black text-xs uppercase tracking-[0.25em] shadow-[0_0_25px_rgba(255,0,127,0.4)] hover:shadow-[0_0_35px_rgba(0,242,255,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 cursor-pointer"
         >
-          <span className="w-1 h-1 rounded-full bg-[#ff007f] opacity-80" />
-          <span className="text-[8px] sm:text-[9px] font-medium uppercase tracking-[0.16em] text-white/60">
-            Toca en cualquier lugar para ingresar
-          </span>
-        </motion.div>
+          <Play size={15} className="fill-white" />
+          <span>Ingresar a la Radio</span>
+          <Sparkles size={14} className="text-white/80" />
+        </motion.button>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.6 }}
+          transition={{ delay: 0.6 }}
+          className="text-[9px] font-bold text-white/50 uppercase tracking-[0.18em] text-center"
+        >
+          O toca en cualquier parte para continuar
+        </motion.p>
       </div>
     </motion.div>
   );
 };
+

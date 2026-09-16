@@ -14,7 +14,7 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         injectRegister: 'auto',
         workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,json}'],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true
@@ -22,37 +22,87 @@ export default defineConfig(({mode}) => {
         manifest: {
           name: 'Radio Corrientes Viva',
           short_name: 'Corrientes Viva',
-          description: 'La mejor música y noticias de San Miguel, Corrientes en vivo.',
+          description: 'Radio Corrientes Viva - San Miguel, Corrientes. Música, noticias y reflexiones en vivo.',
           theme_color: '#ff007f',
-          background_color: '#0a0b1e',
+          background_color: '#050505',
           display: 'standalone',
+          display_override: ['standalone', 'minimal-ui', 'window-controls-overlay'],
           orientation: 'portrait',
           scope: '/',
           start_url: '/',
+          id: '/',
+          categories: ['music', 'entertainment', 'news'],
+          lang: 'es',
+          dir: 'ltr',
+          prefer_related_applications: false,
+          related_applications: [],
           icons: [
             {
-              src: '/logo.png',
+              src: '/pwa-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: '/logo.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: '/logo.png',
+              src: '/pwa-maskable-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'maskable'
             },
             {
-              src: '/logo.png',
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/pwa-maskable-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable'
+            },
+            {
+              src: '/logo.png',
+              sizes: '1024x1024',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/apple-touch-icon.png',
+              sizes: '180x180',
+              type: 'image/png',
+              purpose: 'any'
+            }
+          ],
+          screenshots: [
+            {
+              src: '/screenshot-mobile.png',
+              sizes: '759x1600',
+              type: 'image/png',
+              form_factor: 'narrow',
+              label: 'Radio Corrientes Viva en Vivo'
+            },
+            {
+              src: '/screenshot-desktop.png',
+              sizes: '1280x720',
+              type: 'image/png',
+              form_factor: 'wide',
+              label: 'Reproductor Web de Radio Corrientes Viva'
+            }
+          ],
+          shortcuts: [
+            {
+              name: 'Escuchar en Vivo',
+              short_name: 'En Vivo',
+              description: 'Sintonizar Radio Corrientes Viva',
+              url: '/',
+              icons: [
+                {
+                  src: '/pwa-192x192.png',
+                  sizes: '192x192',
+                  type: 'image/png'
+                }
+              ]
             }
           ]
         }

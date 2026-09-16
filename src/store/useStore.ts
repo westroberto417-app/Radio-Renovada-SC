@@ -2,6 +2,9 @@ import { create } from 'zustand';
 
 export type Tab = 'inicio' | 'chat' | 'pedir' | 'noticias' | 'mas' | 'admin' | 'sumate' | 'aplicacion' | 'reflexion' | 'pedidos_lista' | 'programacion' | 'donaciones' | 'video';
 
+export type VisualizerStyle = 'bars' | 'circular' | 'wave' | 'particles';
+export type VisualizerTheme = 'dynamic' | 'corrientes' | 'chamame' | 'ibera' | 'cyberpunk';
+
 export interface SongRequest {
   id: number;
   name: string;
@@ -17,6 +20,8 @@ interface AppState {
   volume: number;
   isMuted: boolean;
   isDucked: boolean;
+  visualizerStyle: VisualizerStyle;
+  visualizerTheme: VisualizerTheme;
   currentTrack: {
     title: string;
     artist: string;
@@ -31,6 +36,8 @@ interface AppState {
   setVolume: (volume: number) => void;
   setIsMuted: (muted: boolean) => void;
   setIsDucked: (ducked: boolean) => void;
+  setVisualizerStyle: (style: VisualizerStyle) => void;
+  setVisualizerTheme: (theme: VisualizerTheme) => void;
   setTrack: (track: { title: string; artist: string; albumArt?: string }) => void;
   setRequestCount: (count: number) => void;
   setInstallPrompt: (prompt: any) => void;
@@ -41,10 +48,12 @@ interface AppState {
 
 export const useStore = create<AppState>((set) => ({
   activeTab: 'inicio',
-  isPlaying: false,
+  isPlaying: true,
   volume: 0.8,
   isMuted: false,
   isDucked: false,
+  visualizerStyle: 'bars',
+  visualizerTheme: 'dynamic',
   requestCount: 0,
   installPrompt: null,
   isInstallable: false,
@@ -58,6 +67,8 @@ export const useStore = create<AppState>((set) => ({
   setVolume: (volume) => set({ volume }),
   setIsMuted: (muted) => set({ isMuted: muted }),
   setIsDucked: (ducked) => set({ isDucked: ducked }),
+  setVisualizerStyle: (style) => set({ visualizerStyle: style }),
+  setVisualizerTheme: (theme) => set({ visualizerTheme: theme }),
   setTrack: (track) => set({ currentTrack: track }),
   setRequestCount: (count) => set({ requestCount: count }),
   setInstallPrompt: (prompt) => set({ installPrompt: prompt, isInstallable: !!prompt }),

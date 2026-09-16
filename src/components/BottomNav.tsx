@@ -1,39 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Home, MessageSquare, Music, Newspaper, MoreHorizontal, User, Megaphone } from 'lucide-react';
+import React, { memo } from 'react';
+import { Home, Newspaper, MoreHorizontal, Megaphone } from 'lucide-react';
 import { useStore, Tab } from '../store/useStore';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 const tabs = [
   { id: 'inicio', label: 'Inicio', icon: Home },
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'pedir', label: 'Pedir Tema', icon: Music },
   { id: 'noticias', label: 'Noticias', icon: Newspaper },
   { id: 'aplicacion', label: 'Publicidad', icon: Megaphone },
   { id: 'mas', label: 'Más', icon: MoreHorizontal },
 ];
 
-export const BottomNav = () => {
-  const { activeTab, setActiveTab } = useStore();
-  const [requestsCount, setRequestsCount] = useState(0);
-
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const res = await fetch('/api/requests');
-        if (res.ok) {
-          const data = await res.json();
-          setRequestsCount(data.length);
-        }
-      } catch (e) {
-        // Silently fail to not clutter console
-      }
-    };
-    
-    fetchCount();
-    const interval = setInterval(fetchCount, 15000); // Check every 15s
-    return () => clearInterval(interval);
-  }, []);
+export const BottomNav = memo(() => {
+  const activeTab = useStore((state) => state.activeTab);
+  const setActiveTab = useStore((state) => state.setActiveTab);
+  const requestCount = useStore((state) => state.requestCount);
 
   return (
     <div className="fixed bottom-6 left-0 right-0 px-6 flex justify-center z-50 pointer-events-none">
@@ -47,7 +28,7 @@ export const BottomNav = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as Tab)}
               className={cn(
-                "relative flex flex-col items-center justify-center min-w-[50px] sm:min-w-[56px] transition-all duration-200 gap-1",
+                "relative flex flex-col items-center justify-center min-w-[50px] sm:min-w-[56px] transition-all duration-200 gap-1 cursor-pointer",
                 isActive ? "text-[#ff007f] scale-105" : "text-white/40 hover:text-white/70"
               )}
             >
@@ -63,7 +44,7 @@ export const BottomNav = () => {
                 <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                 
                 {/* Badge for "Más" Tab */}
-                {tab.id === 'mas' && requestsCount > 0 && (
+                {tab.id === 'mas' && requestCount > 0 && (
                   <AnimatePresence>
                     <motion.div
                       initial={{ scale: 0 }}
@@ -72,7 +53,7 @@ export const BottomNav = () => {
                       className="absolute -top-1.5 -right-2 w-4 h-4 bg-red-500 rounded-full border-2 border-[#0b0c10] flex items-center justify-center"
                     >
                       <span className="text-[8px] font-bold text-white shadow-none leading-none pt-px">
-                        {requestsCount > 9 ? '9+' : requestsCount}
+                        {requestCount > 9 ? '9+' : requestCount}
                       </span>
                     </motion.div>
                   </AnimatePresence>
@@ -86,4 +67,6 @@ export const BottomNav = () => {
       </nav>
     </div>
   );
-};
+});
+
+BottomNav.displayName = 'BottomNav';

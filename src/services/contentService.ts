@@ -1,9 +1,43 @@
+import {
+  getClientRotatingLocalNews,
+  getClientRotatingProvincialNews,
+  getClientRotatingNationalNews
+} from './localNewsPool';
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
 }
-const NEWS_TTL_MS = 1000 * 60 * 60 * 3; // 3 hours
-const REFLECTION_TTL_MS = 1000 * 60 * 60 * 4; // 4 hours
+export const NEWS_TTL_MS = 1000 * 60 * 60 * 4; // Strictly 4 hours
+export const REFLECTION_TTL_MS = 1000 * 60 * 60 * 4; // 4 hours
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; // Strictly 72 hours window
+const REQUEST_TIMEOUT_MS = 7500; // 7.5s safety timeout to prevent hanging on low RAM / slow connections
+
+// Safe async fetch with AbortController timeout to prevent UI thread starvation
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS): Promise<Response> => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+};
+
+export const getStoredTimestamp = (key: string): number => {
+  try {
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      return typeof parsed.timestamp === 'number' ? parsed.timestamp : 0;
+    }
+  } catch (e) {}
+  return 0;
+};
 
 const getFromCache = <T>(key: string, ttl: number): T | null => {
   try {
@@ -17,14 +51,37 @@ const getFromCache = <T>(key: string, ttl: number): T | null => {
     }
   } catch (e) {}
   return null;
-}
+};
 
 const saveToCache = <T>(key: string, data: T): void => {
   try {
     const entry: CacheEntry<T> = { data, timestamp: Date.now() };
     localStorage.setItem(key, JSON.stringify(entry));
   } catch (e) {}
+};
+
+export interface ContentStatus {
+  localNewsLastUpdate: number;
+  provincialNewsLastUpdate: number;
+  nationalNewsLastUpdate: number;
+  reflectionsLastUpdate: number;
+  serverTime: number;
+  ttl?: {
+    news: number;
+    reflections: number;
+  };
 }
+
+// Lightweight timestamp poll (<100 bytes) to check if server has newer news/reflections
+export const getContentStatus = async (): Promise<ContentStatus | null> => {
+  try {
+    const res = await fetchWithTimeout(`/api/content/status?_t=${Date.now()}`, { cache: 'no-store' }, 4000);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+};
 
 export interface ChatMessage {
   role: "user" | "model";
@@ -33,11 +90,11 @@ export interface ChatMessage {
 
 export const getChatResponse = async (message: string, history: ChatMessage[] = []) => {
   try {
-    const res = await fetch('/api/chat', {
+    const res = await fetchWithTimeout('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, history })
-    });
+    }, 6000);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     return data.text;
@@ -61,87 +118,200 @@ export interface LocalNews {
   tag: string;
   date: string;
   image: string;
+  publishedAt?: number;
+  location?: string;
+  source?: string;
+  isFacebook?: boolean;
 }
+
+/**
+ * Calculates a precise timestamp from news data (either from publishedAt or date text)
+ * and determines if it belongs strictly to the last 3 days (<= 72 hours).
+ */
+export const isNewsWithinLast3Days = (item: LocalNews, referenceNow: number = Date.now()): boolean => {
+  if (!item) return false;
+  const cutoff = referenceNow - THREE_DAYS_MS;
+
+  // 1. Direct publishedAt timestamp check
+  if (typeof item.publishedAt === 'number' && item.publishedAt > 0) {
+    return item.publishedAt >= cutoff;
+  }
+
+  // 2. Semantic text date analysis
+  if (typeof item.date === 'string') {
+    const d = item.date.toLowerCase();
+    
+    // Explicitly old markers -> reject immediately
+    if (
+      d.includes('hace 4 días') || 
+      d.includes('hace 5 días') || 
+      d.includes('hace 6 días') || 
+      d.includes('hace una semana') || 
+      d.includes('hace 1 semana') ||
+      d.includes('hace un mes') ||
+      d.includes('hace 1 mes')
+    ) {
+      return false;
+    }
+
+    // Recent indicators (< 72h) -> accept
+    if (
+      d.includes('hoy') || 
+      d.includes('ayer') || 
+      d.includes('hace 1 día') || 
+      d.includes('hace 2 días') || 
+      d.includes('hace 3 días') || 
+      d.includes('hace unas horas') || 
+      d.includes('último momento') ||
+      d.includes('edición') ||
+      d.includes('actualizado')
+    ) {
+      return true;
+    }
+
+    // Attempt to parse standard date strings
+    const parsedTime = Date.parse(item.date);
+    if (!isNaN(parsedTime) && parsedTime > 0) {
+      return parsedTime >= cutoff;
+    }
+  }
+
+  // Default to true only if recent timestamp was auto-assigned
+  return true;
+};
+
+// Filter news strictly to the last 3 days (<= 72 hours reference window)
+export const filterRecentNews = (news: LocalNews[]): LocalNews[] => {
+  if (!Array.isArray(news)) return [];
+  const referenceNow = Date.now();
+  return news.filter((item) => isNewsWithinLast3Days(item, referenceNow));
+};
+
+// Synchronously get cached news for immediate zero-latency UI rendering
+export const getCachedNews = (type: 'local' | 'provincial' | 'national'): LocalNews[] | null => {
+  const cacheKey = type === 'local' ? "content_local_news" : type === 'provincial' ? "content_provincial_news" : "content_national_news";
+  const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
+  if (cached) {
+    const filtered = filterRecentNews(cached);
+    if (filtered && filtered.length > 0) return filtered;
+  }
+  return null;
+};
+
+// Full cache purge for News and API caches (called when user refreshes buffer or news manually)
+export const clearAllNewsCache = async (): Promise<void> => {
+  try {
+    localStorage.removeItem("content_local_news");
+    localStorage.removeItem("content_provincial_news");
+    localStorage.removeItem("content_national_news");
+  } catch (e) {}
+
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_API_CACHE' });
+  }
+
+  if ('caches' in window) {
+    try {
+      const keys = await caches.keys();
+      for (const key of keys) {
+        if (key.includes('api')) {
+          await caches.delete(key);
+        }
+      }
+    } catch (e) {}
+  }
+};
 
 export const generateLocalNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
   const cacheKey = "content_local_news";
-  if (!forceRefresh) {
-    const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
-    if (cached) return cached;
+  if (forceRefresh) {
+    try { localStorage.removeItem(cacheKey); } catch (e) {}
   }
+
   try {
-    const res = await fetch(`/api/news/local?force=${forceRefresh}`);
-    if (!res.ok) throw new Error("Backend news local failed");
-    const data = await res.json();
-    if (data && data.length > 0) saveToCache(cacheKey, data);
-    return data;
-  } catch (error) {
-    return [
-      {
-        id: Date.now(),
-        title: "Campaña Oftalmológica y de Vacunación en el Hospital",
-        excerpt: "El Hospital de San Miguel informa sobre sus nuevos operativos de control visual y esquemas de vacunación.",
-        fullContent: "El Hospital local de San Miguel ha anunciado que, durante toda la próxima semana, se llevará a cabo una campaña oftalmológica gratuita para todos los vecinos de la región y localidades vecinas como Caá Catí y Loreto. \n\nAdemás del control visual con especialistas, se estará aplicando la vacuna antigripal y se completarán los calendarios nacionales de vacunación obligatoria para niños en edad escolar. \n\nEl operativo oftalmológico funcionará por orden de llegada desde las 07:30 hs y hay un cupo de 50 pacientes por día. Se recomienda asistir temprano y tener a mano el DNI y carnet de salud. \n\nPara el sector de vacunación, las puertas estarán abiertas en horario extendido hasta las 18:00 hs, habilitando una vía rápida en el ingreso lateral del edificio para mayor fluidez. \n\nCuidar la salud es responsabilidad de todos, no pierdas la oportunidad de aprovechar estas campañas preventivas, totalmente gratuitas y muy necesarias para la comunidad.",
-        tag: "SALUD",
-        date: "Actualidad",
-        image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=1470&auto=format&fit=crop"
+    const res = await fetchWithTimeout(`/api/news/local?force=${forceRefresh}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data: LocalNews[] = await res.json();
+      const filtered = filterRecentNews(data);
+      const result = filtered && filtered.length > 0 ? filtered : data;
+      if (result && result.length > 0) {
+        saveToCache(cacheKey, result);
+        return result;
       }
-    ];
+    }
+  } catch (error) {
+    console.warn("Notice: server news fetch error, checking local store / rotating fallback:", error);
   }
+
+  // If network failed (offline / server unreachable), check cached news
+  const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
+  if (cached) {
+    const filtered = filterRecentNews(cached);
+    if (filtered && filtered.length > 0) return filtered;
+  }
+
+  // Dynamic 4-hour rotating local news pool (6 editions per day)
+  return getClientRotatingLocalNews();
 };
 
 export const generateProvincialNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
   const cacheKey = "content_provincial_news";
-  if (!forceRefresh) {
-    const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
-    if (cached) return cached;
+  if (forceRefresh) {
+    try { localStorage.removeItem(cacheKey); } catch (e) {}
   }
+
   try {
-    const res = await fetch(`/api/news/provincial?force=${forceRefresh}`);
-    if (!res.ok) throw new Error("Backend news provincial failed");
-    const data = await res.json();
-    if (data && data.length > 0) saveToCache(cacheKey, data);
-    return data;
-  } catch (error) {
-    return [
-      {
-        id: Date.now() + 500,
-        title: "Turismo Cultural en el Corazón de Corrientes",
-        excerpt: "Crece la llegada de viajeros interesados en ecoturismo e identidad musical correntina.",
-        fullContent: "La provincia de Corrientes consolida su posicionamiento nacional e internacional como destino predilecto para el turismo de naturaleza en los majestuosos Esteros del Iberá. \n\nAsimismo, las peñas y festivales de chamamé a lo largo y ancho del territorio registran récord de convocatoria, impulsando las economías locales y el empleo cultural regional.",
-        tag: "TURISMO",
-        date: "Hoy",
-        image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1470&auto=format&fit=crop"
+    const res = await fetchWithTimeout(`/api/news/provincial?force=${forceRefresh}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data: LocalNews[] = await res.json();
+      const filtered = filterRecentNews(data);
+      const result = filtered && filtered.length > 0 ? filtered : data;
+      if (result && result.length > 0) {
+        saveToCache(cacheKey, result);
+        return result;
       }
-    ];
+    }
+  } catch (error) {
+    console.warn("Notice: server provincial news fetch error, checking local store / rotating fallback:", error);
   }
+
+  const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
+  if (cached) {
+    const filtered = filterRecentNews(cached);
+    if (filtered && filtered.length > 0) return filtered;
+  }
+
+  return getClientRotatingProvincialNews();
 };
 
 export const generateNationalNews = async (forceRefresh: boolean = false): Promise<LocalNews[]> => {
   const cacheKey = "content_national_news";
-  if (!forceRefresh) {
-    const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
-    if (cached) return cached;
+  if (forceRefresh) {
+    try { localStorage.removeItem(cacheKey); } catch (e) {}
   }
+
   try {
-    const res = await fetch(`/api/news/national?force=${forceRefresh}`);
-    if (!res.ok) throw new Error("Backend news national failed");
-    const data = await res.json();
-    if (data && data.length > 0) saveToCache(cacheKey, data);
-    return data;
-  } catch (error) {
-    return [
-      {
-        id: Date.now() + 10,
-        title: "Tendencias Económicas Nacionales",
-        excerpt: "Análisis sobre el comportamiento de los mercados y las nuevas medidas de estabilización.",
-        fullContent: "El panorama económico nacional muestra señales de estabilización en diversos sectores productivos. \n\nAnalistas destacan el incremento en las exportaciones de granos y el fortalecimiento de las economías regionales como motores del crecimiento para el próximo trimestre.\n\nSe espera que las nuevas medidas de fomento industrial permitan una mayor generación de empleo en el sector privado del norte argentino.",
-        tag: "NACIONAL",
-        date: "Hoy",
-        image: "https://images.unsplash.com/photo-1611974714652-760056a2cc09?q=80&w=1470&auto=format&fit=crop"
+    const res = await fetchWithTimeout(`/api/news/national?force=${forceRefresh}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data: LocalNews[] = await res.json();
+      const filtered = filterRecentNews(data);
+      const result = filtered && filtered.length > 0 ? filtered : data;
+      if (result && result.length > 0) {
+        saveToCache(cacheKey, result);
+        return result;
       }
-    ];
+    }
+  } catch (error) {
+    console.warn("Notice: server national news fetch error, checking local store / rotating fallback:", error);
   }
+
+  const cached = getFromCache<LocalNews[]>(cacheKey, NEWS_TTL_MS);
+  if (cached) {
+    const filtered = filterRecentNews(cached);
+    if (filtered && filtered.length > 0) return filtered;
+  }
+
+  return getClientRotatingNationalNews();
 };
 
 export const getMarqueeText = async () => {
@@ -206,9 +376,13 @@ export const generateReflectionsList = async (forceRefresh: boolean = false): Pr
   if (!forceRefresh) {
     const cached = getFromCache<Reflection[]>(cacheKey, REFLECTION_TTL_MS);
     if (cached) return cached;
+  } else {
+    try { localStorage.removeItem(cacheKey); } catch (e) {}
   }
   try {
-    const res = await fetch(`/api/reflections?force=${forceRefresh}`);
+    const res = await fetch(`/api/reflections?force=${forceRefresh}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
     if (!res.ok) throw new Error("Backend reflections failed");
     const data = await res.json();
     if (data && data.length > 0) saveToCache(cacheKey, data);

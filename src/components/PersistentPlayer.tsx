@@ -1,17 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { useStore } from '../store/useStore';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../lib/utils';
 
-export const PersistentPlayer = () => {
+export const PersistentPlayer = memo(() => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { isPlaying, volume, isMuted, isDucked, setIsPlaying, setTrack, currentTrack, setIsMuted } = useStore();
+  const isPlaying = useStore((state) => state.isPlaying);
+  const volume = useStore((state) => state.volume);
+  const isMuted = useStore((state) => state.isMuted);
+  const isDucked = useStore((state) => state.isDucked);
+  const setIsPlaying = useStore((state) => state.setIsPlaying);
+  const setTrack = useStore((state) => state.setTrack);
+  const currentTrack = useStore((state) => state.currentTrack);
   const STREAM_URL = 'https://streaming.rf.com.ar/listen/radiocorrientesviva/radio.mp3';
 
-  // Polling de metadatos desactivado por solicitud del usuario
+  // Initial stream metadata
   useEffect(() => {
-    // Seteamos metadatos estáticos iniciales
     setTrack({
       title: 'Transmitiendo en Vivo',
       artist: 'Radio Corrientes Viva',
@@ -32,48 +34,94 @@ export const PersistentPlayer = () => {
     }
   }, [currentTrack]);
 
+  // Volume & Ducking Control
   useEffect(() => {
     if (audioRef.current) {
       const finalVolume = isMuted ? 0 : (isDucked ? volume * 0.15 : volume);
-      audioRef.current.volume = finalVolume;
+      audioRef.current.volume = Math.max(0, Math.min(1, finalVolume));
     }
   }, [volume, isMuted, isDucked]);
 
+  // Stream Play / Pause & Auto-Start Lifecycle
   useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        if (!audioRef.current.src || !audioRef.current.src.includes(STREAM_URL)) {
-          audioRef.current.src = STREAM_URL + '?t=' + Date.now();
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    let cleanupListeners: (() => void) | null = null;
+
+    if (isPlaying) {
+      if (!audio.src || audio.src === '' || audio.paused) {
+        audio.src = STREAM_URL + '?nocache=' + Date.now();
+        audio.load();
+      }
+
+      const attemptPlay = () => {
+        if (!audioRef.current || !isPlaying) return;
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              if (cleanupListeners) {
+                cleanupListeners();
+                cleanupListeners = null;
+              }
+            })
+            .catch((err) => {
+              console.log("[Autoplay Policy] Waiting for user interaction:", err.message || err);
+              // Browser requires a user gesture: attach one-time unlock listeners
+              const userInteractionEvents = ['click', 'touchstart', 'pointerdown', 'keydown', 'scroll'];
+              
+              const unlockAndPlay = () => {
+                if (audioRef.current && isPlaying) {
+                  audioRef.current.play().catch(() => {});
+                }
+                userInteractionEvents.forEach((evt) => {
+                  window.removeEventListener(evt, unlockAndPlay);
+                });
+              };
+
+              userInteractionEvents.forEach((evt) => {
+                window.addEventListener(evt, unlockAndPlay, { once: true, passive: true });
+              });
+
+              cleanupListeners = () => {
+                userInteractionEvents.forEach((evt) => {
+                  window.removeEventListener(evt, unlockAndPlay);
+                });
+              };
+            });
         }
-        
-        audioRef.current.play().catch((err) => {
-          console.error("Playback error:", err);
+      };
+
+      attemptPlay();
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', () => {
+          if (audioRef.current) {
+            audioRef.current.src = STREAM_URL + '?nocache=' + Date.now();
+            audioRef.current.play().catch(() => {});
+          }
+          setIsPlaying(true);
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.removeAttribute('src');
+          }
           setIsPlaying(false);
         });
-
-        if ('mediaSession' in navigator) {
-          navigator.mediaSession.setActionHandler('play', () => {
-            if (audioRef.current && !audioRef.current.src.includes(STREAM_URL)) {
-              audioRef.current.src = STREAM_URL + '?t=' + Date.now();
-            }
-            audioRef.current?.play();
-            setIsPlaying(true);
-          });
-          navigator.mediaSession.setActionHandler('pause', () => {
-            audioRef.current?.pause();
-            if (audioRef.current) {
-              audioRef.current.removeAttribute('src');
-              audioRef.current.load();
-            }
-            setIsPlaying(false);
-          });
-        }
-      } else {
-        audioRef.current.pause();
-        audioRef.current.removeAttribute('src');
-        audioRef.current.load();
       }
+    } else {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
     }
+
+    return () => {
+      if (cleanupListeners) {
+        cleanupListeners();
+      }
+    };
   }, [isPlaying, setIsPlaying]);
 
   useEffect(() => {
@@ -89,26 +137,28 @@ export const PersistentPlayer = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isPlaying]);
 
-  const togglePlay = () => setIsPlaying(!isPlaying);
-  const toggleMute = () => setIsMuted(!isMuted);
-
   return (
     <audio
+      id="main-radio-audio"
       ref={audioRef}
+      preload="auto"
+      playsInline
+      {...({ 'x-webkit-airplay': 'allow' } as any)}
       onEnded={() => setIsPlaying(false)}
-      onError={(e) => {
-        const target = e.target as HTMLAudioElement;
-        if (isPlaying) {
+      onError={() => {
+        if (isPlaying && audioRef.current) {
           setTimeout(() => {
-            if (audioRef.current) {
-              audioRef.current.src = STREAM_URL + '?t=' + Date.now();
-              audioRef.current.play().catch(err => console.error("Retry failed:", err));
+            if (isPlaying && audioRef.current) {
+              audioRef.current.src = STREAM_URL + '?nocache=' + Date.now();
+              audioRef.current.play().catch(err => console.warn("Stream reconnect retry:", err));
             }
-          }, 3000);
+          }, 2500);
         }
       }}
     />
   );
-};
+});
+
+PersistentPlayer.displayName = 'PersistentPlayer';
 
 export const getAudioElement = () => document.querySelector('audio');

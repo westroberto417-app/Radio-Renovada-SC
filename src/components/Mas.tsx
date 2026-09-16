@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink, Sparkles, Music, Tv } from 'lucide-react';
+import { Mail, Github, Instagram, Facebook, Globe, Phone, ExternalLink, Sparkles, Music, Tv, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../store/useStore';
 
@@ -15,6 +15,31 @@ export const Mas = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleForceUpdate = async () => {
+    setIsUpdating(true);
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map(key => caches.delete(key)));
+      }
+      localStorage.clear();
+      sessionStorage.clear();
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (e) {
+      window.location.reload();
+    }
+  };
+
   const triggerAlert = (name: string) => {
     setToastMessage(name);
     setShowToast(true);
@@ -26,11 +51,18 @@ export const Mas = () => {
   };
 
   const handleInstallClick = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setInstallPrompt(null);
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+        const { outcome } = await installPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setInstallPrompt(null);
+        }
+      } catch (e) {
+        console.error("Error during install prompt:", e);
+      }
+    } else {
+      alert("Para instalar la App Oficial:\n1. Toca los 3 puntos (⋮) arriba a la derecha en Google Chrome.\n2. Selecciona 'Instalar aplicación' o 'Instalar Radio Corrientes Viva'.\n(Nota: No elijas 'Agregar a pantalla principal' ya que solo crea un acceso directo básico).");
     }
   };
 
@@ -41,29 +73,61 @@ export const Mas = () => {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-8"
       >
-        {/* PWA Install Section */}
-        {isInstallable && (
+        {/* PWA Install Section (Shown when in browser mode) */}
+        {!window.matchMedia('(display-mode: standalone)').matches && !(navigator as any).standalone && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-6 rounded-[2.5rem] bg-gradient-to-br from-[#ff007f] to-[#7c3aed] space-y-4 shadow-2xl relative overflow-hidden"
+            className="p-6 rounded-[2.5rem] bg-gradient-to-br from-[#ff007f] via-[#9333ea] to-[#4f46e5] space-y-4 shadow-2xl relative overflow-hidden border border-white/20"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Sparkles size={80} />
             </div>
-            <div className="relative z-10 space-y-3">
-              <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">
-                Instala la App <br />
-                <span className="text-white/80">En tu móvil</span>
-              </h3>
-              <p className="text-xs text-white/90 font-medium">
-                Accede más rápido y sin necesidad de navegador.
+            <div className="relative z-10 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-xl flex items-center justify-center shrink-0 border border-white/30">
+                  <img 
+                    src="/pwa-maskable-192x192.png" 
+                    alt="Icono Radio Corrientes Viva" 
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div>
+                  <div className="inline-block px-2 py-0.5 rounded-full bg-white/20 text-[9px] font-black uppercase tracking-widest text-white mb-1">
+                    App Oficial
+                  </div>
+                  <h3 className="text-xl font-black text-white uppercase italic tracking-tighter leading-none">
+                    Instalar en Pantalla de Inicio
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-xs text-white/90 font-medium leading-relaxed">
+                Disfruta de la radio como una aplicación nativa con su icono distintivo, sin barras de navegación y con máxima estabilidad.
               </p>
+
               <button 
                 onClick={handleInstallClick}
-                className="w-full py-3 bg-white text-[#ff007f] rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-all shadow-lg"
+                className="w-full py-3.5 bg-white text-[#ff007f] rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-white/95 transition-all shadow-xl cursor-pointer flex items-center justify-center gap-2"
               >
-                Instalar Ahora
+                <Sparkles size={16} />
+                Instalar Aplicación Oficial
+              </button>
+
+              <div className="bg-black/30 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 text-[11px] text-white/80 space-y-2">
+                <p className="font-bold text-white uppercase tracking-wider text-[10px] text-cyan-300">Instalación Rápida:</p>
+                <p>• <strong>Android (Chrome):</strong> Menú <span className="bg-white/20 px-1 rounded font-mono">⋮</span> &gt; <strong>“Instalar aplicación”</strong>.</p>
+                <p>• <strong>iPhone (Safari):</strong> Botón <span className="bg-white/20 px-1 rounded font-mono">[↑]</span> &gt; <strong>“Agregar a inicio”</strong>.</p>
+                <p className="text-[10px] text-white/60 pt-1 border-t border-white/10">💡 Desinstala cualquier acceso con la letra "R" previo para que Android instale el paquete completo con el logo oficial.</p>
+              </div>
+
+              <button
+                onClick={handleForceUpdate}
+                disabled={isUpdating}
+                className="w-full py-2.5 bg-black/40 hover:bg-black/60 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border border-white/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <RefreshCw size={14} className={isUpdating ? "animate-spin text-cyan-300" : ""} />
+                {isUpdating ? "Limpiando y actualizando..." : "Limpiar Caché y Forzar Actualización"}
               </button>
             </div>
           </motion.div>
@@ -245,10 +309,26 @@ export const Mas = () => {
           )}
         </AnimatePresence>
 
-        <div className="text-center py-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full mb-4">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#ff007f] glow-pink" />
-            <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Version 1.0.0</span>
+        <div className="text-center py-6 space-y-4">
+          <div className="p-5 rounded-3xl bg-white/[0.03] border border-white/10 max-w-sm mx-auto space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">Versión 2.5.0 Actualizada</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 font-mono font-semibold">Online</span>
+            </div>
+            <p className="text-[11px] text-white/50 text-left leading-relaxed">
+              ¿No visualizas los últimos cambios o mejoras en tu pantalla? Pulsa el botón para sincronizar la app.
+            </p>
+            <button
+              onClick={handleForceUpdate}
+              disabled={isUpdating}
+              className="w-full py-2.5 px-4 bg-white/10 hover:bg-white/20 active:scale-98 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border border-white/10"
+            >
+              <RefreshCw size={14} className={isUpdating ? "animate-spin text-[#00f2ff]" : "text-[#ff007f]"} />
+              {isUpdating ? "Sincronizando..." : "Sincronizar y Limpiar Caché"}
+            </button>
           </div>
 
           <p className="text-[10px] text-white/20 uppercase tracking-widest font-medium">

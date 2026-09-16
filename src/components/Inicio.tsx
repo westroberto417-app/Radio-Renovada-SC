@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Sparkles, Moon, Share2 } from 'lucide-react';
+import React, { useState, useEffect, memo } from 'react';
+import { Play, Pause, Volume2, VolumeX, Sparkles, Moon, Share2, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore } from '../store/useStore';
 import { getMarqueeText } from '../services/contentService';
+import { Visualizer } from './Visualizer';
 import { cn } from '../lib/utils';
 
-const RadioLogo = ({ isPlaying }: { isPlaying: boolean }) => {
+const RadioLogo = memo(({ isPlaying }: { isPlaying: boolean }) => {
   const [logoError, setLogoError] = useState(false);
   const [albumArtError, setAlbumArtError] = useState(false);
   const logoUrl = "/logo.png"; // Ruta esperada para el logo del usuario
-  const { currentTrack } = useStore();
+  const currentTrack = useStore((state) => state.currentTrack);
 
   const isGeneric = !currentTrack.title || 
                     currentTrack.title === 'Radio Corrientes Viva' || 
@@ -98,14 +99,83 @@ const RadioLogo = ({ isPlaying }: { isPlaying: boolean }) => {
       </AnimatePresence>
     </div>
   );
-};
+});
 
-export const Inicio = () => {
-  const { isPlaying, setIsPlaying, currentTrack, volume, setVolume, isMuted, setIsMuted, isInstallable, installPrompt, setInstallPrompt } = useStore();
+RadioLogo.displayName = 'RadioLogo';
+
+// Memoized Volume Control Subcomponent
+const VolumeControl = memo(() => {
+  const volume = useStore((state) => state.volume);
+  const setVolume = useStore((state) => state.setVolume);
+  const isMuted = useStore((state) => state.isMuted);
+  const setIsMuted = useStore((state) => state.setIsMuted);
+
+  return (
+    <div className="w-full flex items-center gap-4 px-2 mb-6 font-sans">
+      <button onClick={() => setIsMuted(!isMuted)} className="text-white/40 cursor-pointer hover:text-white transition-colors">
+        {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+      </button>
+      <div className="flex-1 h-[2px] bg-white/10 relative rounded-full">
+        <div 
+          style={{ width: `${volume * 100}%` }}
+          className="absolute left-0 top-0 h-full bg-white rounded-full shadow-[0_0_8px_white]"
+        />
+        <div 
+          style={{ left: `${volume * 100}%` }}
+          className="absolute top-1/2 -translate-y-1/2 -ml-1.5 w-3 h-3 bg-white rounded-full shadow-lg border-2 border-zinc-900"
+        />
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={volume}
+          onChange={(e) => setVolume(parseFloat(e.target.value))}
+          className="absolute inset-0 opacity-0 cursor-pointer w-full"
+        />
+      </div>
+    </div>
+  );
+});
+
+VolumeControl.displayName = 'VolumeControl';
+
+export const Inicio = memo(() => {
+  const isPlaying = useStore((state) => state.isPlaying);
+  const setIsPlaying = useStore((state) => state.setIsPlaying);
+  const currentTrack = useStore((state) => state.currentTrack);
+  const isInstallable = useStore((state) => state.isInstallable);
+  const installPrompt = useStore((state) => state.installPrompt);
+  const setInstallPrompt = useStore((state) => state.setInstallPrompt);
+
   const [showTimerMenu, setShowTimerMenu] = useState(false);
   const [sleepTimer, setSleepTimer] = useState<number | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
   const [marqueeText, setMarqueeText] = useState("Escuchando Radio Corrientes Viva...");
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleForceRefresh = async () => {
+    setIsClearing(true);
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          await caches.delete(key);
+        }
+      }
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {
+      console.error(e);
+    }
+    window.location.href = window.location.origin + window.location.pathname + '?refresh=' + Date.now();
+  };
 
   useEffect(() => {
     const fetchMarquee = async () => {
@@ -125,7 +195,7 @@ export const Inicio = () => {
       }, sleepTimer * 60 * 1000);
       return () => clearTimeout(timer);
     }
-  }, [sleepTimer]);
+  }, [sleepTimer, setIsPlaying]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen pt-24 pb-28 px-8 overflow-hidden relative">
@@ -153,22 +223,9 @@ export const Inicio = () => {
           </div>
         </div>
 
-        {/* Linear Waveform Visualizer */}
-        <div className="w-full h-12 flex items-center justify-center gap-1 mb-8 px-4 font-sans">
-           {Array.from({ length: 20 }).map((_, i) => (
-             <div
-               key={i}
-               style={{
-                 '--eq-height': `${40 + Math.random() * 60}%`,
-                 '--eq-dur': `${0.8 + Math.random() * 0.5}s`,
-                 height: isPlaying ? '20%' : '10%',
-               } as React.CSSProperties}
-               className={cn(
-                 "w-[4px] bg-[#ff007f] rounded-full transition-all",
-                 isPlaying ? "animate-eq" : ""
-               )}
-             />
-           ))}
+        {/* Dynamic Frequency-Reactive Audio Visualizer */}
+        <div className="w-full mb-8 px-2">
+          <Visualizer variant="compact" showControls={true} />
         </div>
 
         {/* Track Info */}
@@ -358,30 +415,7 @@ export const Inicio = () => {
         </AnimatePresence>
 
         {/* Volume & Details Bar */}
-        <div className="w-full flex items-center gap-4 px-2 mb-6 font-sans">
-           <button onClick={() => setIsMuted(!isMuted)} className="text-white/40 cursor-pointer">
-             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-           </button>
-           <div className="flex-1 h-[2px] bg-white/10 relative rounded-full">
-              <motion.div 
-                animate={{ width: `${volume * 100}%` }}
-                className="absolute left-0 top-0 h-full bg-white rounded-full shadow-[0_0_8px_white]"
-              />
-              <motion.div 
-                animate={{ left: `${volume * 100}%` }}
-                className="absolute top-1/2 -translate-y-1/2 -ml-1.5 w-3 h-3 bg-white rounded-full shadow-lg border-2 border-zinc-900"
-              />
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full"
-              />
-           </div>
-        </div>
+        <VolumeControl />
 
         {/* Marquee Schedule */}
         <div className="w-full mt-4 mb-2 font-sans">
@@ -412,62 +446,96 @@ export const Inicio = () => {
           </div>
         </div>
 
-        {/* Custom Visible Mobile Install Box */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full mt-4 p-5 rounded-[2rem] bg-zinc-950/70 border border-[#ff007f]/30 backdrop-blur-md shadow-lg flex flex-col gap-4 relative overflow-hidden font-sans"
-        >
-          {/* Subtle Glow background */}
-          <div className="absolute -right-16 -top-16 w-36 h-36 rounded-full bg-[#ff007f]/10 blur-2xl pointer-events-none" />
+        {/* Custom Visible Mobile Install Box (Only shown in browser mode, hidden when already running standalone) */}
+        {!window.matchMedia('(display-mode: standalone)').matches && !(navigator as any).standalone && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full mt-4 p-5 rounded-[2rem] bg-zinc-950/80 border border-[#ff007f]/40 backdrop-blur-md shadow-2xl flex flex-col gap-4 relative overflow-hidden font-sans"
+          >
+            {/* Subtle Glow background */}
+            <div className="absolute -right-16 -top-16 w-40 h-40 rounded-full bg-[#ff007f]/15 blur-2xl pointer-events-none" />
 
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-[#ff007f]/10 border border-[#ff007f]/20 flex items-center justify-center text-[#ff007f] shrink-0">
-              <Sparkles size={18} className="text-glow-pink animate-pulse" />
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white p-1.5 shadow-md flex items-center justify-center shrink-0 border border-white/20">
+                <img 
+                  src="/pwa-maskable-192x192.png" 
+                  alt="Icono de la App" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="space-y-1 text-left">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                    Instalar App Oficial
+                  </h4>
+                  <span className="bg-[#ff007f] text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-[0_0_8px_#ff007f]">
+                    WebAPK
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/70 font-medium leading-tight">
+                  Instala con el icono oficial en tu pantalla de inicio y ábrela en pantalla completa sin barras del navegador.
+                </p>
+              </div>
             </div>
-            <div className="space-y-0.5">
-              <h4 className="text-[11px] font-black text-white uppercase tracking-wider flex items-center gap-1.5">
-                Instalar App en tu Celular
-                <span className="bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest leading-none">PWA</span>
-              </h4>
-              <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest leading-tight">
-                Lleva Radio Corrientes Viva siempre contigo en tu pantalla de inicio
-              </p>
-            </div>
-          </div>
 
-          <div className="border-t border-white/5 pt-3.5 flex flex-col gap-2.5 text-left">
-            {isInstallable ? (
+            <div className="border-t border-white/10 pt-3.5 flex flex-col gap-3 text-left">
               <button 
                 onClick={async () => {
                   if (installPrompt) {
-                    installPrompt.prompt();
-                    const { outcome } = await installPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                      setInstallPrompt(null);
+                    try {
+                      await installPrompt.prompt();
+                      const { outcome } = await installPrompt.userChoice;
+                      if (outcome === 'accepted') {
+                        setInstallPrompt(null);
+                      }
+                    } catch (e) {
+                      console.error("Install prompt error:", e);
                     }
+                  } else {
+                    // Instruction if browser hasn't triggered event or on Android menu
+                    alert("Para instalar en Android:\n1. Toca el menú de 3 puntos (⋮) arriba a la derecha en Chrome.\n2. Busca y selecciona 'Instalar aplicación' (o 'Instalar Radio Corrientes Viva').\n\nEn iPhone (Safari):\n1. Toca el botón Compartir [↑].\n2. Elige 'Agregar a inicio'.");
                   }
                 }}
-                className="w-full py-3 bg-[#ff007f] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#ff007f]/80 transition-all shadow-lg active:scale-95 cursor-pointer text-center"
+                className="w-full py-3.5 bg-gradient-to-r from-[#ff007f] to-[#7c3aed] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-[0_0_20px_rgba(255,0,127,0.4)] active:scale-95 cursor-pointer text-center flex items-center justify-center gap-2"
               >
-                ¡Instalar en un Click!
+                <Sparkles size={16} />
+                ¡Instalar App Oficial en tu Celular!
               </button>
-            ) : (
-              <div className="text-[9px] text-white/50 uppercase tracking-widest space-y-1.5 font-bold leading-normal">
-                <p className="text-[#00f2ff] text-glow-cyan text-[10px] mb-1">Guía Rápida de Instalación Manual:</p>
-                <div className="flex items-start gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff007f] mt-1 shrink-0" />
-                  <span>En iPhone/iOS: Pulsa <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">Compartir ↑</span> y luego <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">“Agregar a Inicio”.</span></span>
+
+              <div className="text-[10px] text-white/70 space-y-2.5 font-medium leading-relaxed bg-white/5 p-3.5 rounded-xl border border-white/5">
+                <p className="text-[#00f2ff] font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] animate-ping" />
+                  Instrucciones de Instalación:
+                </p>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-emerald-400 shrink-0">Android (Chrome):</span>
+                  <span>Abre en una pestaña normal (no incógnito), toca el menú <span className="text-white font-bold bg-white/10 px-1.5 py-0.5 rounded font-mono">⋮</span> arriba a la derecha y selecciona <strong className="text-white bg-[#ff007f]/30 px-1.5 py-0.5 rounded">“Instalar aplicación”</strong> (NO “Agregar a la pantalla principal”).</span>
                 </div>
-                <div className="flex items-start gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff007f] mt-1 shrink-0" />
-                  <span>Android/Chrome: Toca <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">opciones ⋮</span> y pulsa <span className="text-white font-extrabold px-1 bg-white/5 rounded font-mono">“Instalar aplicación”.</span></span>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-blue-400 shrink-0">iPhone (Safari):</span>
+                  <span>Toca el botón <span className="text-white font-bold bg-white/10 px-1.5 py-0.5 rounded font-mono">Compartir [↑]</span> abajo y selecciona <strong className="text-white bg-white/10 px-1.5 py-0.5 rounded">“Agregar a inicio”</strong>.</span>
+                </div>
+                <div className="pt-2 border-t border-white/10 text-white/50 text-[9px] space-y-1">
+                  <p>💡 <strong className="text-white/80">Nota importante:</strong> En tu teléfono Xiaomi / Android, desinstala el acceso con la letra "R" para que el sistema te permita instalar la aplicación real con su logo oficial.</p>
+                  <p>🔒 <strong className="text-white/80">Modo incógnito:</strong> Google Chrome desactiva la instalación de aplicaciones en modo incógnito por seguridad.</p>
                 </div>
               </div>
-            )}
-          </div>
-        </motion.div>
+
+              <button
+                onClick={handleForceRefresh}
+                disabled={isClearing}
+                className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <RefreshCw size={14} className={cn(isClearing && "animate-spin text-[#ff007f]")} />
+                {isClearing ? "Actualizando y limpiando caché..." : "Limpiar Caché y Forzar Actualización"}
+              </button>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
-};
+});
+
+Inicio.displayName = 'Inicio';
