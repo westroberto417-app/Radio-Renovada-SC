@@ -32,7 +32,7 @@ function getGenAI(): GoogleGenAI | null {
 
 // --- Quota & Rate Limit Resilience Circuit Breaker ---
 let lastQuotaExhaustedTime = 0;
-const QUOTA_COOLDOWN_MS = 1000 * 60 * 15; // 15-minute cooldown when quota limit (429) is hit
+const QUOTA_COOLDOWN_MS = 1000 * 60 * 10; // 10-minute cooldown when quota limit (429) or high demand (503) is hit
 
 function isQuotaExhausted(): boolean {
   if (!process.env.GEMINI_API_KEY) return true;
@@ -42,11 +42,20 @@ function isQuotaExhausted(): boolean {
 function recordQuotaError(error: any) {
   const errMsg = String(error?.message || error || '');
   const status = error?.status || error?.code;
-  if (status === 429 || status === 'RESOURCE_EXHAUSTED' || errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('RESOURCE_EXHAUSTED')) {
+  if (
+    status === 429 || 
+    status === 503 || 
+    status === 'RESOURCE_EXHAUSTED' || 
+    status === 'UNAVAILABLE' ||
+    errMsg.includes('429') || 
+    errMsg.includes('503') || 
+    errMsg.includes('quota') || 
+    errMsg.includes('demand') ||
+    errMsg.includes('RESOURCE_EXHAUSTED') ||
+    errMsg.includes('UNAVAILABLE')
+  ) {
     lastQuotaExhaustedTime = Date.now();
-    console.warn("Gemini API quota reached (429 RESOURCE_EXHAUSTED). Activating 15m cooldown and serving authentic live verified feeds.");
-  } else {
-    console.warn("Notice during background news generation:", errMsg.slice(0, 120));
+    console.warn("Gemini API spike / busy (429/503). Activating cooldown and serving verified fallback feeds seamlessly.");
   }
 }
 
@@ -124,6 +133,8 @@ async function generateWithGeminiFallback(prompt: string, expectJson: boolean = 
     'gemini-3.8-flash'
   ];
 
+  let lastCaughtError: any = null;
+
   for (const model of candidateModels) {
     try {
       const config: any = {};
@@ -155,9 +166,14 @@ async function generateWithGeminiFallback(prompt: string, expectJson: boolean = 
         return rawText;
       }
     } catch (err: any) {
-      console.warn(`Model ${model} note: ${err?.message?.slice(0, 100)}`);
+      lastCaughtError = err;
     }
   }
+
+  if (lastCaughtError) {
+    recordQuotaError(lastCaughtError);
+  }
+
   return null;
 }
 
